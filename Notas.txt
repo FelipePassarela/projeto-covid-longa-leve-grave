@@ -1,1 +1,6 @@
-Xgboost sem otimização e com chrX : 0.7021
+- feature importance e selecao de features com Random Forest
+- PCA não ideal
+- 12 genes
+- 0.74 com Baseline (SVM-RBF)
+- Otmização cai devido a alta variancia dos dados
+- plot tsne
