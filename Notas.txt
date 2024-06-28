@@ -1,0 +1,1 @@
+Xgboost sem otimização e com chrX : 0.7021
