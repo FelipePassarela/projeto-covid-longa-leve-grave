@@ -63,9 +63,9 @@ def feature_selection(X, y, X_train, X_test, n_features):
     return X_train_selected,X_test_selected
 
 
-def save_model(model):
+def save_model(model, n_features):
     os.makedirs("models", exist_ok=True)
-    model_file = f"models/{model.__class__.__name__}_rfe.pkl"
+    model_file = f"models/{model.__class__.__name__}_{n_features}feats_rfe.pkl"
     with open(model_file, 'wb') as file:
         pickle.dump(model, file)
 
@@ -115,7 +115,7 @@ def main():
             })
             df_out = pd.concat([df_out, new_row], ignore_index=True)
 
-            save_model(model)
+            save_model(model, n_features)
 
         os.makedirs("results", exist_ok=True)
         df_out.to_csv(f"results/{model.__class__.__name__}_rfe.csv", index=False)
