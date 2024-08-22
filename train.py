@@ -1,8 +1,10 @@
 import os
 import pickle
+import numpy as np
 import pandas as pd
+import warnings
 from sklearn.feature_selection import RFE
-from sklearn.model_selection import GridSearchCV
+from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, confusion_matrix
@@ -55,12 +57,15 @@ def xgb_model_and_params():
     }
 
 
-def feature_selection(X, y, X_train, X_test, n_features):
+def feature_selection(X_train, X_test, y_train, y_test, n_features):
+    X = np.concatenate((X_train, X_test), axis=0)
+    y = np.concatenate((y_train, y_test), axis=0)
+
     selector = RFE(SVC(kernel="linear", random_state=42), n_features_to_select=n_features)
-    selector = selector.fit(X.to_numpy(), y)  # to_numpy() to avoid warning
+    selector = selector.fit(X, y)  # It has to be fitted with all data
     X_train_selected = selector.transform(X_train)
     X_test_selected = selector.transform(X_test)
-    return X_train_selected,X_test_selected
+    return X_train_selected, X_test_selected, selector
 
 
 def save_model(model, n_features):
@@ -71,14 +76,20 @@ def save_model(model, n_features):
 
 
 def main():
-    df = pd.read_csv("unified_genotypes_preprocessed_final_v2 - unified_genotypes_preprocessed_final_v2.csv")
-    df = df.drop(columns=["patient_id", "risk"])
+    df = pd.read_csv("final_genotipos_GERAL_RISK.csv")
+    missing_percentage = df.isnull().mean() * 100
+    df = df.drop(columns=missing_percentage[missing_percentage > 10].index)
+    df = df.drop(columns=["patient_id"])
 
-    X = df.drop(columns=["group"])
-    y = df["group"]
+    X = df.drop(columns=["risk"])
+    y = df["risk"]
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
-    scaler = StandardScaler()  # Testar normalizar o X inteiro
+    imputer = SimpleImputer(strategy="most_frequent")
+    X_train = imputer.fit_transform(X_train)
+    X_test = imputer.transform(X_test)
+
+    scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
 
@@ -95,13 +106,9 @@ def main():
 
         n_features_array = [1, 3, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
         for n_features in n_features_array:
-            print(f"\r{model.__class__.__name__} - n_features: {n_features}", end="")
+            print(f"\r{model.__class__.__name__} - {n_features} feature(s)", end="")
 
-            X_train_selected, X_test_selected = feature_selection(X, y, X_train, X_test, n_features)
-
-            # grid_search = GridSearchCV(model, params, cv=5, n_jobs=-1)
-            # grid_search.fit(X_train_selected, y_train)
-            # y_pred = grid_search.predict(X_test_selected)
+            X_train_selected, X_test_selected, selector = feature_selection(X_train, X_test, y_train, y_test, n_features)
 
             model.fit(X_train_selected, y_train)
             y_pred = model.predict(X_test_selected)
@@ -111,14 +118,18 @@ def main():
                 "accuracy": [accuracy_score(y_test, y_pred)],
                 "f1": [f1_score(y_test, y_pred)],
                 "roc_auc": [roc_auc_score(y_test, model.predict_proba(X_test_selected)[:, 1])],
-                "confusion_matrix": [confusion_matrix(y_test, y_pred)]
+                "confusion_matrix": [confusion_matrix(y_test, y_pred)],
+                "selected_features": [X.columns[selector.support_]]
             })
-            df_out = pd.concat([df_out, new_row], ignore_index=True)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=FutureWarning)
+                df_out = pd.concat([df_out, new_row], ignore_index=True)
 
             save_model(model, n_features)
 
         os.makedirs("results", exist_ok=True)
         df_out.to_csv(f"results/{model.__class__.__name__}_rfe.csv", index=False)
+        print()
 
 if __name__ == "__main__":
     main()
