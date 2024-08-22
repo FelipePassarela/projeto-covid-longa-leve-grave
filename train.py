@@ -1,3 +1,4 @@
+from json import load
 import os
 import pickle
 import numpy as np
@@ -57,15 +58,10 @@ def xgb_model_and_params():
     }
 
 
-def feature_selection(X_train, X_test, y_train, y_test, n_features):
+def fit_selector(X_train, X_test, y_train, y_test, selector):
     X = np.concatenate((X_train, X_test), axis=0)
     y = np.concatenate((y_train, y_test), axis=0)
-
-    selector = RFE(SVC(kernel="linear", random_state=42), n_features_to_select=n_features)
-    selector = selector.fit(X, y)  # It has to be fitted with all data
-    X_train_selected = selector.transform(X_train)
-    X_test_selected = selector.transform(X_test)
-    return X_train_selected, X_test_selected, selector
+    selector.fit(X, y)  # It has to be fitted with all data
 
 
 def save_model(model, n_features):
@@ -73,6 +69,15 @@ def save_model(model, n_features):
     model_file = f"models/{model.__class__.__name__}_{n_features}feats_rfe.pkl"
     with open(model_file, 'wb') as file:
         pickle.dump(model, file)
+
+
+def load_model(model_name, n_features):
+    model_file = f"models/{model_name}_{n_features}feats_rfe.pkl"
+    try:
+        with open(model_file, 'rb') as file:
+            return pickle.load(file)
+    except FileNotFoundError:
+        return RFE(SVC(kernel="linear", random_state=42), n_features_to_select=n_features)
 
 
 def main():
@@ -93,6 +98,10 @@ def main():
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
 
+    n_features_array = [1, 3, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
+    selector_array = [
+        load_model("RFE", n_features) for n_features in n_features_array
+    ]
     models_and_params = (
         lr_model_and_params(),
         svm_model_and_params(),
@@ -101,20 +110,27 @@ def main():
         xgb_model_and_params()
     )
 
+    for selector in selector_array:
+        if not hasattr(selector, "n_features_"):  # If it was not fitted
+            print(f"\rTraining RFE with {selector.n_features_to_select} feature(s)...", end="")
+            fit_selector(X_train, X_test, y_train, y_test, selector)
+            save_model(selector, selector.n_features_to_select)
+    print()
+
     for model, params in models_and_params:
         df_out = pd.DataFrame(columns=["n_features", "accuracy", "f1", "roc_auc", "confusion_matrix"])
 
-        n_features_array = [1, 3, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
-        for n_features in n_features_array:
-            print(f"\r{model.__class__.__name__} - {n_features} feature(s)", end="")
+        for selector in selector_array:
+            print(f"\rTraining {model.__class__.__name__} with {selector.n_features_to_select} feature(s)...", end="") 
 
-            X_train_selected, X_test_selected, selector = feature_selection(X_train, X_test, y_train, y_test, n_features)
-
+            X_train_selected = selector.transform(X_train)
+            X_test_selected = selector.transform(X_test)
+            
             model.fit(X_train_selected, y_train)
             y_pred = model.predict(X_test_selected)
 
             new_row = pd.DataFrame({
-                "n_features": [n_features],
+                "n_features": [selector.n_features_],
                 "accuracy": [accuracy_score(y_test, y_pred)],
                 "f1": [f1_score(y_test, y_pred)],
                 "roc_auc": [roc_auc_score(y_test, model.predict_proba(X_test_selected)[:, 1])],
@@ -124,8 +140,8 @@ def main():
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", category=FutureWarning)
                 df_out = pd.concat([df_out, new_row], ignore_index=True)
-
-            save_model(model, n_features)
+            
+            save_model(model, selector.n_features_)
 
         os.makedirs("results", exist_ok=True)
         df_out.to_csv(f"results/{model.__class__.__name__}_rfe.csv", index=False)
