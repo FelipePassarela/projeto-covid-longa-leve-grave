@@ -1,4 +1,3 @@
-from json import load
 import os
 import pickle
 import numpy as np
@@ -7,7 +6,7 @@ import warnings
 from sklearn.feature_selection import RFE
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, confusion_matrix
 from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
@@ -126,6 +125,11 @@ def main():
             X_train_selected = selector.transform(X_train)
             X_test_selected = selector.transform(X_test)
             
+            # grid_search = GridSearchCV(model, params, cv=5, scoring="auc_roc", n_jobs=-1)
+            # grid_search.fit(X_train_selected, y_train)
+            # model = grid_search.best_estimator_
+            # y_pred = model.predict(X_test_selected)
+
             model.fit(X_train_selected, y_train)
             y_pred = model.predict(X_test_selected)
 
