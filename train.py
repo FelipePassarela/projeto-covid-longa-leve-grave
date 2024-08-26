@@ -117,7 +117,7 @@ def main():
     print()
 
     for model, params in models_and_params:
-        df_out = pd.DataFrame(columns=["n_features", "accuracy", "f1", "roc_auc", "confusion_matrix"])
+        df_out = pd.DataFrame(columns=["n_features", "accuracy", "f1", "roc_auc", "confusion_matrix", "selected_features"])
 
         for selector in selector_array:
             print(f"\rTraining {model.__class__.__name__} with {selector.n_features_to_select} feature(s)...", end="") 
