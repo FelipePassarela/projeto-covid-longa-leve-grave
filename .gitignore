@@ -2,3 +2,4 @@
 models/
 plots/
 results/
+__pycache__/
