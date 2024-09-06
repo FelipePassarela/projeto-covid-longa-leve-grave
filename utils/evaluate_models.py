@@ -44,6 +44,10 @@ def evaluate_models(X_train, X_test, y_train, y_test, X_columns, selector_array,
                 "selected_features": [X_columns[selector.support_]]
             })
 
+            if tune:
+                new_row_train["parameters"] = [model.get_params()]
+                new_row_test["parameters"] = [model.get_params()]
+
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", category=FutureWarning)
                 df_out_train = pd.concat([df_out_train, new_row_train], ignore_index=True)
