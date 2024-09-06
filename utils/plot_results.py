@@ -8,7 +8,7 @@ def plot_results(path, score, title, xlabel, ylabel):
 
     for file in os.listdir(path):
         if file.endswith(".csv"):
-            model_name = file.split("_")[0]
+            model_name = file.split(".")[0]
             data = pd.read_csv(os.path.join(path, file))
             plt.plot(data["n_features"], data[score], label=model_name, marker='o')
 
