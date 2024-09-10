@@ -1,5 +1,6 @@
 *.csv
 models/
 plots/
+backup/
 results/
 __pycache__/
