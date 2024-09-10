@@ -26,8 +26,8 @@ def main():
     evaluate_models(X_train, X_test, y_train, y_test, X.columns, selector_array, models_and_params, tune=False)
     evaluate_models(X_train, X_test, y_train, y_test, X.columns, selector_array, models_and_params, tune=True)
 
-    plot_results("results/train/standart", "roc_auc", "ROC AUC de Diferentes Modelos (Treino)", "Número de SNPs", "ROC AUC")
-    plot_results("results/test/standart", "roc_auc", "ROC AUC de Diferentes Modelos (Teste)", "Número de SNPs", "ROC AUC")
+    plot_results("results/train/standart", "roc_auc", "ROC AUC de Diferentes Modelos (Treino - Padrão)", "Número de SNPs", "ROC AUC")
+    plot_results("results/test/standart", "roc_auc", "ROC AUC de Diferentes Modelos (Teste - Padrão)", "Número de SNPs", "ROC AUC")
     plot_results("results/train/tuned", "roc_auc", "ROC AUC de Diferentes Modelos (Treino - Ajustado)", "Número de SNPs", "ROC AUC")
     plot_results("results/test/tuned", "roc_auc", "ROC AUC de Diferentes Modelos (Teste - Ajustado)", "Número de SNPs", "ROC AUC")
 
