@@ -1,18 +1,58 @@
 import os
+from typing import List, Tuple
 import warnings
 import pandas as pd
+from sklearn.base import BaseEstimator
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, roc_auc_score
 from sklearn.model_selection import GridSearchCV
 from utils.model_dumping import save_model
+from utils.models_and_params import HyperParamGrid
 
 
-def evaluate_models(X_train, X_test, y_train, y_test, X_columns, selector_array, models_and_params, tune=False):
+def evaluate_models(X_train: pd.DataFrame, X_test: pd.DataFrame, y_train: pd.Series, 
+                    y_test: pd.Series, X_columns: List[str], selector_array: List[BaseEstimator],
+                    models_and_params: List[Tuple[BaseEstimator, HyperParamGrid]], tune: bool) -> None:
+    """
+    Evaluate the models with the given data and hyperparameters and save the 
+    results in CSV files at the results folder.
+
+    :param X_train: The training data.
+    :type X_train: pd.DataFrame
+
+    :param X_test: The testing data.
+    :type X_test: pd.DataFrame
+
+    :param y_train: The training labels.
+    :type y_train: pd.Series
+
+    :param y_test: The testing labels.
+    :type y_test: pd.Series
+
+    :param X_columns: The columns of the data.
+    :type X_columns: List[str]
+
+    :param selector_array: The feature selectors for each number of features.
+    :type selector_array: List[BaseEstimator]
+
+    :param models_and_params: The models and hyperparameters.
+    :type models_and_params: List[Tuple[BaseEstimator, HyperParamGrid]]
+
+    :param tune: Whether to tune the hyperparameters or not.
+    :type tune: bool
+
+    :return: None
+    :rtype: None
+    """
+
     for model, params in models_and_params:
         df_out_train = pd.DataFrame(columns=["n_features", "accuracy", "f1", "roc_auc", "confusion_matrix", "selected_features"])
         df_out_test = pd.DataFrame(columns=["n_features", "accuracy", "f1", "roc_auc", "confusion_matrix", "selected_features"])
 
         for selector in selector_array:
-            print(f"\rTraining {model.__class__.__name__} with {selector.n_features_to_select} feature(s)...", end="")
+            if tune:
+                print(f"\rTuning {model.__class__.__name__ } with {selector.n_features_to_select} feature(s)...", end="")
+            else:
+                print(f"\rTraining {model.__class__.__name__} with {selector.n_features_to_select} feature(s)...", end="")
 
             X_train_selected = selector.transform(X_train)
             X_test_selected = selector.transform(X_test)
@@ -55,8 +95,8 @@ def evaluate_models(X_train, X_test, y_train, y_test, X_columns, selector_array,
 
             save_model(model, selector.n_features_)
 
-        train_path = f"results/train/{"tuned" if tune else "standart"}"
-        test_path = f"results/test/{"tuned" if tune else "standart"}"
+        train_path = f"results/train/{"tuned" if tune else "standard"}"
+        test_path = f"results/test/{"tuned" if tune else "standard"}"
         os.makedirs(train_path, exist_ok=True)
         os.makedirs(test_path, exist_ok=True)
         df_out_train.to_csv(f"{train_path}/{model.__class__.__name__}.csv", index=False)
