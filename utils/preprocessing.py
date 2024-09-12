@@ -10,7 +10,7 @@ from utils.model_dumping import load_rfe_selector, save_model
 def load_data(file_path: str) -> pd.DataFrame:
     """
     Load data from a CSV file and preprocess it by dropping columns with more 
-    than 10% of missing values.
+    than 6% of missing values.
 
     :param file_path: Path to the CSV file.
     :type file_path: str
@@ -21,7 +21,7 @@ def load_data(file_path: str) -> pd.DataFrame:
 
     df = pd.read_csv(file_path)
     missing_percentage = df.isnull().mean() * 100
-    df = df.drop(columns=missing_percentage[missing_percentage > 10].index)
+    df = df.drop(columns=missing_percentage[missing_percentage > 6].index)  # 6% is the best threshold we found
     df = df.drop(columns=["patient_id"])
     return df
 
@@ -47,6 +47,7 @@ def preprocess_data(X_train: np.ndarray, X_test: np.ndarray) -> np.ndarray:
     scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
+
     return X_train, X_test
 
 
