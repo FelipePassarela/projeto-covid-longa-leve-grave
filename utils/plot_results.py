@@ -88,11 +88,13 @@ def plot_all_results_subplots(score: str) -> None:
     data_list = []
     for key, value in RESULTS_PATHS.items():
         for file in os.listdir(value):
-            if file.endswith(".csv"):
-                data = pd.read_csv(os.path.join(value, file))
-                data["model"] = file.split(".")[0]
-                data["type"] = key
-                data_list.append(data)
+            if not file.endswith(".csv"):
+                continue
+
+            data = pd.read_csv(os.path.join(value, file))
+            data["model"] = file.split(".")[0]
+            data["type"] = key
+            data_list.append(data)
 
     data = pd.concat(data_list, ignore_index=True)
     data["n_features"] = data["n_features"].astype(str)
