@@ -7,21 +7,24 @@ from sklearn.impute import SimpleImputer
 from utils.model_dumping import load_rfe_selector, save_model
 
 
-def load_data(file_path: str) -> pd.DataFrame:
+def load_data(file_path: str, threshold: float = 10.0) -> pd.DataFrame:
     """
     Load data from a CSV file and preprocess it by dropping columns with more 
-    than 6% of missing values.
+    than a specified percentage of missing values.
 
     :param file_path: Path to the CSV file.
     :type file_path: str
     
+    :param threshold: Maximum percentage of missing values allowed for a column to be kept.
+    :type threshold: float
+
     :return: The dataframe with the data.
     :rtype: pd.DataFrame
     """
 
     df = pd.read_csv(file_path)
     missing_percentage = df.isnull().mean() * 100
-    df = df.drop(columns=missing_percentage[missing_percentage > 10].index)  # 10% is the best threshold we found
+    df = df.drop(columns=missing_percentage[missing_percentage > threshold].index)
     df = df.drop(columns=["patient_id"])
     return df
 
@@ -74,9 +77,7 @@ def train_selectors(X_train: np.ndarray, X_test: np.ndarray, y_train: np.ndarray
     """
 
     n_features_array = [1, 3, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
-    selector_array = [
-        load_rfe_selector(n_features) for n_features in n_features_array
-    ]
+    selector_array = [load_rfe_selector(n_features) for n_features in n_features_array]
 
     for selector in selector_array:
         if hasattr(selector, "n_features_"):  # If it was already trained,
@@ -113,6 +114,9 @@ def fit_selector(X_train:np.ndarray, X_test:np.ndarray, y_train:np.ndarray, y_te
     :rtype: None
     """
 
-    X = np.concatenate((X_train, X_test), axis=0)  # We decide do fit the selector in the whole dataset
-    y = np.concatenate((y_train, y_test), axis=0)
-    selector.fit(X, y)
+    selector.fit(X_train, y_train)
+
+    # We decide do fit the selector in the whole dataset
+    # X = np.concatenate((X_train, X_test), axis=0)
+    # y = np.concatenate((y_train, y_test), axis=0)
+    # selector.fit(X, y)
