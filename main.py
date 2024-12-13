@@ -20,7 +20,7 @@ from utils.preprocessing import load_data, preprocess_data, train_selectors
 from utils.plot_results import plot_all_results_subplots, plot_results, plot_umap_projection
 
 
-FILE_NAME = "final_genotipos_GERAL_RISK.csv"
+FILE_NAME = "data/final_genotipos_GERAL_RISK.csv"
 
 
 def main():

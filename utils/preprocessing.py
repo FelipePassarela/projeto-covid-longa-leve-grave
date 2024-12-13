@@ -21,7 +21,7 @@ def load_data(file_path: str) -> pd.DataFrame:
 
     df = pd.read_csv(file_path)
     missing_percentage = df.isnull().mean() * 100
-    df = df.drop(columns=missing_percentage[missing_percentage > 6].index)  # 6% is the best threshold we found
+    df = df.drop(columns=missing_percentage[missing_percentage > 10].index)  # 10% is the best threshold we found
     df = df.drop(columns=["patient_id"])
     return df
 
