@@ -1,9 +1,10 @@
-from typing import List
+from typing import List, Tuple
 import numpy as np
 import pandas as pd
 from sklearn.discriminant_analysis import StandardScaler
 from sklearn.feature_selection import RFE
 from sklearn.impute import SimpleImputer
+from imblearn.over_sampling import ADASYN
 from utils.model_dumping import load_rfe_selector, save_model
 
 
@@ -120,3 +121,22 @@ def fit_selector(X_train:np.ndarray, X_test:np.ndarray, y_train:np.ndarray, y_te
     # X = np.concatenate((X_train, X_test), axis=0)
     # y = np.concatenate((y_train, y_test), axis=0)
     # selector.fit(X, y)
+
+
+def oversample(X_train: np.ndarray, y_train: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Oversample the minority class in the training data.
+
+    :param X_train: The training data.
+    :type X_train: np.ndarray
+
+    :param y_train: The training labels.
+    :type y_train: np.ndarray
+
+    :return: The oversampled training data.
+    :rtype: Tuple[np.ndarray, np.ndarray]
+    """
+
+    adasyn = ADASYN(sampling_strategy='minority', random_state=42)
+    X_train_resamp, y_train_resamp = adasyn.fit_resample(X_train, y_train)
+    return X_train_resamp, y_train_resamp

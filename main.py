@@ -16,21 +16,22 @@ __email__ = "felipepassarela11@gmail.com"
 from sklearn.model_selection import train_test_split
 from utils.evaluate_models import evaluate_models
 from utils.models_and_params import get_model_and_params
-from utils.preprocessing import load_data, preprocess_data, train_selectors
+from utils.preprocessing import load_data, preprocess_data, train_selectors, oversample
 from utils.plot_results import plot_all_results_subplots, plot_results, plot_umap_projection
 
 
-FILE_NAME = "data/covid_longa/matriz_genotipos_geral_filtrado.csv"
+FILE_NAME = "data/risk/matriz_genotipos_vac_filtrado.csv"
 
 
 def main():
     df = load_data(FILE_NAME)
 
-    X = df.drop(columns=["LC"])
-    y = df["LC"]
+    X = df.drop(columns=["risk"])
+    y = df["risk"]
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
     X_train, X_test = preprocess_data(X_train, X_test)
+    X_train, y_train = oversample(X_train, y_train)
     selector_array = train_selectors(X_train, X_test, y_train, y_test)
 
     models_and_params = [
