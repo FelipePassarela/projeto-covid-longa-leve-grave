@@ -45,8 +45,8 @@ def evaluate_models(X_train: pd.DataFrame, X_test: pd.DataFrame, y_train: pd.Ser
     """
 
     for model, params in models_and_params:
-        df_out_train = pd.DataFrame(columns=["n_features", "accuracy", "f1", "roc_auc", "confusion_matrix", "selected_features"])
-        df_out_test = pd.DataFrame(columns=["n_features", "accuracy", "f1", "roc_auc", "confusion_matrix", "selected_features"])
+        df_out_train = pd.DataFrame()
+        df_out_test = pd.DataFrame()
 
         for selector in selector_array:
             if tune:
