@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple, Union
+from typing import Any, Dict, List, Tuple
 from sklearn.base import BaseEstimator
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
@@ -7,8 +7,7 @@ from sklearn.svm import SVC
 from xgboost import XGBClassifier
 
 
-HyperParamValue = Union[int, float, str]           # Type alias for hyperparameter values.
-HyperParamGrid = Dict[str, List[HyperParamValue]]  # Type alias for hyperparameters grid.
+HyperParamGrid = Dict[str, List[Any]]  # Type alias for hyperparameters grid.
 
 MODELS_AND_PARAMS = {
     "svm": (
@@ -61,10 +60,8 @@ def get_model_and_params(model_name: str) -> Tuple[BaseEstimator, HyperParamGrid
     Return the model and the hyperparameters to be tested in the GridSearchCV based on the model name.
 
     :param model_name: The name of the model.
-    :type model_name: str
     
     :return: The model and the hyperparameters.
-    :rtype: Tuple[BaseEstimator, Dict[str, List[HyperParamValue]]]
     """
     
     if model_name in MODELS_AND_PARAMS:

@@ -2,7 +2,7 @@ from typing import List, Tuple
 import numpy as np
 import pandas as pd
 from sklearn.discriminant_analysis import StandardScaler
-from sklearn.feature_selection import RFE
+from sklearn.feature_selection import RFE, SelectorMixin
 from sklearn.impute import SimpleImputer
 from imblearn.over_sampling import ADASYN
 from utils.model_dumping import load_rfe_selector, save_model
@@ -14,15 +14,10 @@ def load_data(file_path: str, threshold: float = 10.0) -> pd.DataFrame:
     than a specified percentage of missing values.
 
     :param file_path: Path to the CSV file.
-    :type file_path: str
-    
     :param threshold: Maximum percentage of missing values allowed for a column to be kept.
-    :type threshold: float
 
     :return: The dataframe with the data.
-    :rtype: pd.DataFrame
     """
-
     df = pd.read_csv(file_path)
     missing_percentage = df.isnull().mean() * 100
     df = df.drop(columns=missing_percentage[missing_percentage > threshold].index)
@@ -30,20 +25,18 @@ def load_data(file_path: str, threshold: float = 10.0) -> pd.DataFrame:
     return df
 
 
-def preprocess_data(X_train: np.ndarray, X_test: np.ndarray) -> np.ndarray:
+def preprocess_data(
+        X_train: pd.DataFrame | np.ndarray, 
+        X_test: pd.DataFrame | np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Preprocess the data by imputing the most frequent value and scaling it.
 
     :param X_train: The training data.
-    :type X_train: np.ndarray
-
     :param X_test: The testing data.
-    :type X_test: np.ndarray
 
-    :return: The preprocessed training and testing data.
-    :rtype: Tuple[np.ndarray, np.ndarray]
+    :return: X_train and X_test preprocessed.
     """
-
     imputer = SimpleImputer(strategy="most_frequent")
     X_train = imputer.fit_transform(X_train)
     X_test = imputer.transform(X_test)
@@ -55,30 +48,27 @@ def preprocess_data(X_train: np.ndarray, X_test: np.ndarray) -> np.ndarray:
     return X_train, X_test
 
 
-def train_selectors(X_train: np.ndarray, X_test: np.ndarray, y_train: np.ndarray, y_test: np.ndarray) -> List[RFE]:
+def train_selectors(
+        X_train: pd.DataFrame | np.ndarray, 
+        X_test: pd.DataFrame | np.ndarray, 
+        y_train: pd.Series | np.ndarray, 
+        y_test: pd.Series | np.ndarray, 
+        features_array: List[int]
+    ) -> List[RFE]:
     """
     Train the Recursive Feature Elimination (RFE) selectors with different number of features.
 
     Load the selectors from the disk if they already exist. Otherwise, train them and save them.
 
     :param X_train: The training data.
-    :type X_train: np.ndarray
-
     :param X_test: The testing data.
-    :type X_test: np.ndarray
-
     :param y_train: The training labels.
-    :type y_train: np.ndarray
-    
     :param y_test: The testing labels.
-    :type y_test: np.ndarray
+    :param features_array: The number of features to be selected by each selector.
 
     :return: An array with the trained selectors for different number of features.
-    :rtype: List[RFE]
     """
-
-    n_features_array = [1, 3, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
-    selector_array = [load_rfe_selector(n_features) for n_features in n_features_array]
+    selector_array = [load_rfe_selector(n_features, "models/selectors") for n_features in features_array]
 
     for selector in selector_array:
         if hasattr(selector, "n_features_"):  # If it was already trained,
@@ -86,35 +76,28 @@ def train_selectors(X_train: np.ndarray, X_test: np.ndarray, y_train: np.ndarray
 
         print(f"\rTraining {selector.__class__.__name__} with {selector.n_features_to_select} feature(s)...", end="")
         fit_selector(X_train, X_test, y_train, y_test, selector)
-        save_model(selector, selector.n_features_to_select)
+        save_model(selector, selector.n_features_to_select, "models/selectors")
     print()
 
     return selector_array
 
 
-def fit_selector(X_train:np.ndarray, X_test:np.ndarray, y_train:np.ndarray, y_test:np.ndarray, selector: object) -> None:
+def fit_selector(
+        X_train: pd.DataFrame | np.ndarray, 
+        X_test: pd.DataFrame | np.ndarray, 
+        y_train: pd.Series | np.ndarray, 
+        y_test: pd.Series | np.ndarray, 
+        selector: SelectorMixin
+    ) -> None:
     """
     Fit the selector in the whole dataset.
 
     :param X_train: The training data.
-    :type X_train: np.ndarray
-
     :param X_test: The testing data.
-    :type X_test: np.ndarray
-
     :param y_train: The training labels.
-    :type y_train: np.ndarray
-
     :param y_test: The testing labels.
-    :type y_test: np.ndarray
-
     :param selector: The selector to be fitted.
-    :type selector: object
-
-    :return: None
-    :rtype: None
     """
-
     selector.fit(X_train, y_train)
 
     # We decide do fit the selector in the whole dataset
@@ -123,18 +106,17 @@ def fit_selector(X_train:np.ndarray, X_test:np.ndarray, y_train:np.ndarray, y_te
     # selector.fit(X, y)
 
 
-def oversample(X_train: np.ndarray, y_train: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+def oversample(
+        X_train: pd.DataFrame | np.ndarray, 
+        y_train: pd.DataFrame | np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Oversample the minority class in the training data.
 
     :param X_train: The training data.
-    :type X_train: np.ndarray
-
     :param y_train: The training labels.
-    :type y_train: np.ndarray
-
-    :return: The oversampled training data.
-    :rtype: Tuple[np.ndarray, np.ndarray]
+    
+    :return: The oversampled training data and labels.
     """
 
     adasyn = ADASYN(sampling_strategy='minority', random_state=42)

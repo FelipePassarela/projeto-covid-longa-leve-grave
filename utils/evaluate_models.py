@@ -1,49 +1,39 @@
 import os
-from typing import List, Tuple
+from typing import Sequence, Tuple
+from models_and_params import HyperParamGrid
 import warnings
+import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator
+from sklearn.feature_selection import RFE
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, roc_auc_score
 from sklearn.model_selection import GridSearchCV
 from utils.model_dumping import save_model
-from utils.models_and_params import HyperParamGrid
 
 
-def evaluate_models(X_train: pd.DataFrame, X_test: pd.DataFrame, y_train: pd.Series, 
-                    y_test: pd.Series, X_columns: List[str], selector_array: List[BaseEstimator],
-                    models_and_params: List[Tuple[BaseEstimator, HyperParamGrid]], tune: bool) -> None:
+def evaluate_models(
+        X_train: pd.DataFrame | np.ndarray,
+        X_test: pd.DataFrame | np.ndarray,
+        y_train: pd.Series | np.ndarray,
+        y_test: pd.Series | np.ndarray,
+        X_columns: pd.Index[str],
+        selector_array: Sequence[RFE],
+        models_and_params: Sequence[Tuple[BaseEstimator, HyperParamGrid]],
+        tune: bool
+    ) -> None:
     """
     Evaluate the models with the given data and hyperparameters and save the 
     results in CSV files at the results folder.
 
     :param X_train: The training data.
-    :type X_train: pd.DataFrame
-
     :param X_test: The testing data.
-    :type X_test: pd.DataFrame
-
     :param y_train: The training labels.
-    :type y_train: pd.Series
-
     :param y_test: The testing labels.
-    :type y_test: pd.Series
-
     :param X_columns: The columns of the data.
-    :type X_columns: List[str]
-
     :param selector_array: The feature selectors for each number of features.
-    :type selector_array: List[BaseEstimator]
-
     :param models_and_params: The models and hyperparameters.
-    :type models_and_params: List[Tuple[BaseEstimator, HyperParamGrid]]
-
     :param tune: Whether to tune the hyperparameters or not.
-    :type tune: bool
-
-    :return: None
-    :rtype: None
     """
-
     for model, params in models_and_params:
         df_out_train = pd.DataFrame()
         df_out_test = pd.DataFrame()
@@ -93,7 +83,7 @@ def evaluate_models(X_train: pd.DataFrame, X_test: pd.DataFrame, y_train: pd.Ser
                 df_out_train = pd.concat([df_out_train, new_row_train], ignore_index=True)
                 df_out_test = pd.concat([df_out_test, new_row_test], ignore_index=True)
 
-            save_model(model, selector.n_features_)
+            save_model(model, selector.n_features_, f"models/{"tuned" if tune else "standard"}")
 
         train_path = f"results/train/{"tuned" if tune else "standard"}"
         test_path = f"results/test/{"tuned" if tune else "standard"}"

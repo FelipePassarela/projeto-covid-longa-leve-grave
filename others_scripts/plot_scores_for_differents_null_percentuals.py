@@ -1,6 +1,5 @@
 from matplotlib import pyplot as plt
 import pandas as pd
-import os
 
 
 def histogram_null_values(df: pd.DataFrame) -> None:
@@ -9,7 +8,6 @@ def histogram_null_values(df: pd.DataFrame) -> None:
     dataframe and indicate the 95th and 99th percentiles.
 
     :param df: The dataframe with the data.
-    :type df: pd.DataFrame
     """
     missing_percentage = df.isnull().mean() * 100
     missing_percentage.hist(bins=10, figsize=(10, 6))
@@ -27,12 +25,10 @@ def histogram_null_values(df: pd.DataFrame) -> None:
     plt.axvline(percentile_99, color='r', linestyle='dashed', linewidth=1)
     plt.text(percentile_99 * 1.01, plt.ylim()[1] * 0.95, f'99th Percentile: {percentile_99:.2f}%', color='r')
 
-    plt.savefig(f"../data/backup/{title.replace(' ', '_')}.png")
+    plt.savefig(f"data/backup/{title.replace(' ', '_')}.png")
     plt.show()
 
 
 if __name__ == "__main__":
-    df = pd.read_csv("data/risk/matriz_genotipos_geral_filtrado.csv")
+    df = pd.read_csv("data/matriz_GERAL.csv")
     histogram_null_values(df)
-    # plot_score_for_differents_null_thresholds("roc_auc", 10)
-    # plot_score_for_differents_null_thresholds("roc_auc", 15)
