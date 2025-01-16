@@ -1,6 +1,6 @@
 import os
 from typing import Sequence, Tuple
-from models_and_params import HyperParamGrid
+from utils.models_and_params import HyperParamGrid
 import warnings
 import numpy as np
 import pandas as pd
@@ -16,7 +16,7 @@ def evaluate_models(
         X_test: pd.DataFrame | np.ndarray,
         y_train: pd.Series | np.ndarray,
         y_test: pd.Series | np.ndarray,
-        X_columns: pd.Index[str],
+        X_columns: pd.Index,
         selector_array: Sequence[RFE],
         models_and_params: Sequence[Tuple[BaseEstimator, HyperParamGrid]],
         tune: bool

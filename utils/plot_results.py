@@ -167,7 +167,7 @@ def plot_umap_projection(data_path: str) -> None:
 def plot_shap(
         X_train: pd.DataFrame | np.ndarray,
         X_test: pd.DataFrame | np.ndarray,
-        X_columns: pd.Index[str],
+        X_columns: pd.Index,
         models_path: str,
         comparison_metric: str = "roc_auc"
     ) -> None:

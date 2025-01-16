@@ -25,7 +25,7 @@ def histogram_null_values(df: pd.DataFrame) -> None:
     plt.axvline(percentile_99, color='r', linestyle='dashed', linewidth=1)
     plt.text(percentile_99 * 1.01, plt.ylim()[1] * 0.95, f'99th Percentile: {percentile_99:.2f}%', color='r')
 
-    plt.savefig(f"data/backup/{title.replace(' ', '_')}.png")
+    plt.savefig(f"{title.replace(' ', '_')}.png")
     plt.show()
 
 

@@ -20,7 +20,7 @@ from utils.preprocessing import load_data, preprocess_data, train_selectors, ove
 from utils.plot_results import plot_all_results_subplots, plot_results, plot_shap, plot_umap_projection
 
 
-FILE_NAME = "data/risk_1/geral.csv"
+FILE_NAME = "data/risk_1/no_vac.csv"
 TARGET = "Risk"
 
 
