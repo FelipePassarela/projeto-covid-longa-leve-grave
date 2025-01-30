@@ -154,8 +154,8 @@ def plot_umap_projection(data_path: str) -> None:
         plt.gca().set_aspect('equal', 'datalim')
         plt.grid(False)
 
-        handle, _ = scatter.legend_elements()
-        plt.legend(handle, ["Low Risk", "High Risk"], title="Risk")
+        handles, _ = scatter.legend_elements()
+        plt.legend(handles, ["Low Risk", "High Risk"], title="Risk")
         plt.tight_layout()
 
         os.makedirs("output/plots/umap", exist_ok=True)
@@ -230,7 +230,7 @@ def calculate_shap_values(
     """
     if isinstance(model, XGBClassifier):
         shap_values = shap.TreeExplainer(model).shap_values(X_test_selected)
-    if isinstance(model, RandomForestClassifier):
+    elif isinstance(model, RandomForestClassifier):
         shap_values = shap.TreeExplainer(model).shap_values(X_test_selected)
         shap_values = np.array(shap_values)[:, :, 1]
     else:
