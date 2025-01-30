@@ -19,10 +19,10 @@ SCORE_TITLES = {
 }
 
 RESULTS_PATHS = {
-    'test_standard' : 'results/test/standard',
-    'train_standard': 'results/train/standard',
-    'test_tuned'    : 'results/test/tuned',
-    'train_tuned'   : 'results/train/tuned',
+    'test_standard' : 'output/results/test/standard',
+    'train_standard': 'output/results/train/standard',
+    'test_tuned'    : 'output/results/test/tuned',
+    'train_tuned'   : 'output/results/train/tuned',
 }
 
 SUBPLOT_TITLES = {
@@ -59,8 +59,8 @@ def plot_results(results_type: str, score: str) -> None:
     plt.grid(True, which='both', linestyle='--')
     plt.tight_layout()
 
-    os.makedirs("plots", exist_ok=True)
-    plt.savefig(f"plots/{title.replace(" ", "_").lower()}.png")
+    os.makedirs("output/plots", exist_ok=True)
+    plt.savefig(f"output/plots/{title.replace(" ", "_").lower()}.png")
     plt.close()
 
 
@@ -116,8 +116,8 @@ def plot_all_results_subplots(score: str) -> None:
     fig.text(0.03, 0.5, SCORE_TITLES[score], ha='center', va='center', rotation='vertical', fontsize=14)
     plt.tight_layout(rect=[0.03, 0.03, 1, 1])
     
-    os.makedirs("plots", exist_ok=True)
-    plt.savefig(f"plots/{main_title.replace(' ', '_').lower()}.png")
+    os.makedirs("output/plots", exist_ok=True)
+    plt.savefig(f"output/plots/{main_title.replace(' ', '_').lower()}.png")
     plt.close()
 
 
@@ -133,7 +133,7 @@ def plot_umap_projection(data_path: str) -> None:
     df = load_data(data_path)
 
     for i in [3, *range(5, 51, 5)]:
-        with open(f"models/RFE_{i}feats.pkl", "rb") as f:
+        with open(f"output/models/RFE_{i}feats.pkl", "rb") as f:
             selector = pickle.load(f)
 
         X = df.drop(columns=["risk"])
@@ -158,8 +158,8 @@ def plot_umap_projection(data_path: str) -> None:
         plt.legend(handle, ["Low Risk", "High Risk"], title="Risk")
         plt.tight_layout()
 
-        os.makedirs("plots/umap", exist_ok=True)
-        plt.savefig(f"plots/umap/UMAP_{selector.n_features_}feats.png")
+        os.makedirs("output/plots/umap", exist_ok=True)
+        plt.savefig(f"output/plots/umap/UMAP_{selector.n_features_}feats.png")
         plt.clf()
         plt.close()
 
@@ -191,8 +191,8 @@ def plot_shap(
             selector = pickle.load(f)
 
         paths = (os.path.join(models_path, "standard"), os.path.join(models_path, "tuned"))
-        model_standard, score_standard = get_best_model(selector.n_features_, paths[0], "results/test/standard/", comparison_metric)
-        model_tuned, score_tuned       = get_best_model(selector.n_features_, paths[1], "results/test/tuned/", comparison_metric)
+        model_standard, score_standard = get_best_model(selector.n_features_, paths[0], "output/results/test/standard/", comparison_metric)
+        model_tuned, score_tuned       = get_best_model(selector.n_features_, paths[1], "output/results/test/tuned/", comparison_metric)
         model_path = f"tuned/{model_tuned}" if score_tuned > score_standard else f"standard/{model_standard}"
 
         with open(f"{models_path}/{model_path}", "rb") as f:
@@ -208,8 +208,8 @@ def plot_shap(
         plt.title(f"SHAP values of the {model.__class__.__name__} model")
         plt.tight_layout()
 
-        os.makedirs("plots/shap", exist_ok=True)
-        plt.savefig(f"plots/shap/{selector.n_features_}feats.png")
+        os.makedirs("output/plots/shap", exist_ok=True)
+        plt.savefig(f"output/plots/shap/{selector.n_features_}feats.png")
         plt.clf()
         plt.close()
 

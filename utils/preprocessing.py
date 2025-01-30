@@ -68,7 +68,7 @@ def train_selectors(
 
     :return: An array with the trained selectors for different number of features.
     """
-    selector_array = [load_rfe_selector(n_features, "models/selectors") for n_features in features_array]
+    selector_array = [load_rfe_selector(n_features, "output/models/selectors") for n_features in features_array]
 
     for selector in selector_array:
         if hasattr(selector, "n_features_"):  # If it was already trained,
@@ -76,7 +76,7 @@ def train_selectors(
 
         print(f"\rTraining {selector.__class__.__name__} with {selector.n_features_to_select} feature(s)...", end="")
         fit_selector(X_train, X_test, y_train, y_test, selector)
-        save_model(selector, selector.n_features_to_select, "models/selectors")
+        save_model(selector, selector.n_features_to_select, "output/models/selectors")
     print()
 
     return selector_array

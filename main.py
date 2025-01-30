@@ -20,8 +20,8 @@ from utils.preprocessing import load_data, preprocess_data, train_selectors, ove
 from utils.plot_results import plot_all_results_subplots, plot_results, plot_shap, plot_umap_projection
 
 
-FILE_NAME = "data/risk_1/no_vac.csv"
-TARGET = "Risk"
+FILE_NAME = "data/28_01/longa/nao_vacinados_uma_dose/matriz_genotipos_no_vac_COVID_LONGA_UMA__DOSE_filtrado.csv"
+TARGET = "Long Covid"
 
 
 def main() -> None:
@@ -68,7 +68,7 @@ def main() -> None:
     plot_results("train_tuned", evaluation_metric)
     plot_results("test_tuned", evaluation_metric)
     plot_all_results_subplots(evaluation_metric)
-    plot_shap(X_train, X_test, X.columns, "models/", evaluation_metric)
+    plot_shap(X_train, X_test, X.columns, "output/models/", evaluation_metric)
     # plot_umap_projection(FILE_NAME)
 
 

@@ -1,3 +1,4 @@
+import os
 from matplotlib import pyplot as plt
 import pandas as pd
 
@@ -25,7 +26,9 @@ def histogram_null_values(df: pd.DataFrame) -> None:
     plt.axvline(percentile_99, color='r', linestyle='dashed', linewidth=1)
     plt.text(percentile_99 * 1.01, plt.ylim()[1] * 0.95, f'99th Percentile: {percentile_99:.2f}%', color='r')
 
-    plt.savefig(f"{title.replace(' ', '_')}.png")
+    path = f"output/{title.replace(' ', '_')}.png"
+    os.makedirs("output", exist_ok=True)
+    plt.savefig(path)
     plt.show()
 
 

@@ -83,10 +83,10 @@ def evaluate_models(
                 df_out_train = pd.concat([df_out_train, new_row_train], ignore_index=True)
                 df_out_test = pd.concat([df_out_test, new_row_test], ignore_index=True)
 
-            save_model(model, selector.n_features_, f"models/{"tuned" if tune else "standard"}")
+            save_model(model, selector.n_features_, f"output/models/{'tuned' if tune else 'standard'}")
 
-        train_path = f"results/train/{"tuned" if tune else "standard"}"
-        test_path = f"results/test/{"tuned" if tune else "standard"}"
+        train_path = f"output/results/train/{'tuned' if tune else 'standard'}"
+        test_path = f"output/results/test/{'tuned' if tune else 'standard'}"
         os.makedirs(train_path, exist_ok=True)
         os.makedirs(test_path, exist_ok=True)
         df_out_train.to_csv(f"{train_path}/{model.__class__.__name__}.csv", index=False)
