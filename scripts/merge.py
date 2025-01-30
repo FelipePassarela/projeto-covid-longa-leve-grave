@@ -2,29 +2,29 @@ import pandas as pd
 import os
 
 
-def merge(analises_path: str, geral_path: str, save_path: str, column_name: str):
+def merge(info_path: str, genom_path: str, save_path: str, column_name: str):
     """
-    Merge the analysis CSV file with the general data CSV file and save the result.
+    Merge the genomic data with the patient information data.
 
-    :param analises_path: The path to the analysis CSV file.
-    :param geral_path: The path to the general data CSV file.
+    :param info_path: The path to the patient information data.
+    :param genom_path: The path to the genomic data.
     :param save_path: The path to save the merged data.
-    :param column_name: The name of the column to be merged.
+    :param column_name: The name of the column to merge on.
     """
     try:
-        if not os.path.exists(analises_path):
-            raise FileNotFoundError("The analysis CSV file was not found.")
-        if not os.path.exists(geral_path):
-            raise FileNotFoundError("The general data CSV file was not found.")
+        if not os.path.exists(info_path):
+            raise FileNotFoundError(f"File {info_path} not found.")
+        if not os.path.exists(genom_path):
+            raise FileNotFoundError(f"File {genom_path} not found.")
 
-        df_analises = pd.read_csv(analises_path)
-        df_geral = pd.read_csv(geral_path)
-        df_geral = df_geral.merge(df_analises[['patient_id', column_name]], on='patient_id', how='left')
+        df_info = pd.read_csv(info_path)
+        df_genom = pd.read_csv(genom_path)
+        df_genom = df_genom.merge(df_info[['patient_id', column_name]], on='patient_id', how='left')
 
-        print(df_analises.head())
-        print(df_geral.head())
+        print(df_info.head())
+        print(df_genom.head())
 
-        df_geral.to_csv(save_path, index=False)
+        df_genom.to_csv(save_path, index=False)
         print("Data merged and saved successfully.")
 
     except FileNotFoundError as e:
@@ -33,8 +33,8 @@ def merge(analises_path: str, geral_path: str, save_path: str, column_name: str)
 
 if __name__ == "__main__":
     merge(
-        "data/Planilha - GERAL.csv",
-        "data/matriz_no_vac.csv",
-        "data/risk_1/no_vac.csv",
-        "Risk"
+        "data/28_01/longa/nao_vacinados_uma_dose/Planilha - NAO_VAC_1_COVID_LONGA.csv",
+        "data/28_01/longa/nao_vacinados_uma_dose/matriz_genotipos_no_vac_COVID_LONGA_UMA__DOSE_filtrado.csv",
+        "data/28_01/longa/nao_vacinados_uma_dose/matriz_genotipos_no_vac_COVID_LONGA_UMA__DOSE_filtrado.csv",
+        "Long Covid"
     )
