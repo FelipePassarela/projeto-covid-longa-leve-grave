@@ -1,16 +1,23 @@
 import os
 import pickle
+from os import PathLike
+from pathlib import Path
+from typing import Dict
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+import shap
+from matplotlib import pyplot as plt
 from sklearn.base import BaseEstimator
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
+from sklearn.feature_selection import RFE
 from xgboost import XGBClassifier
-from utils.preprocessing import load_data, preprocess_data
-from umap import UMAP
-import shap
 
+from utils.evaluate_models import EvalResultsDict, extract_subset
+from utils.models_and_params import get_model_name
+
+EvalSummaryDict = Dict[str, Dict[str, pd.DataFrame]]
 
 SCORE_TITLES = {
     "accuracy": "Accuracy",
@@ -33,141 +40,86 @@ SUBPLOT_TITLES = {
 }
 
 
-def plot_results(results_type: str, score: str) -> None:
+def plot_result(
+        ax: plt.Axes,
+        results_dict: Dict[str, pd.DataFrame], 
+        score: str,
+        title: str = None,
+        subtitle: str = None,
+        path: PathLike = None
+    ) -> None:
     """
-    Plots a figure comparing different model's scores for different number of features.
+    Plot the results of different models for different number of features.
 
-    :param results_type: Type of the results to be plotted. Should be one of the keys in RESULTS_PATHS.
+    :param ax: The axis to plot the results.
+    :param results_dict: Dictionary containing the results for each model.
     :param score: Score to be plotted. Should be one of the score columns in the CSV files.
+    :param title: Title to be added to the plot. Defaults to None.
+    :param subtitle: Subtitle to be added to the plot. Defaults to None.
+    :param path: If provided, the plot will be saved to this path.
     """
-    plt.figure(figsize=(10, 6))
+    for model_name, results in results_dict.items():
+        ax.plot(results["n_features"], results[score], label=model_name, marker='o')
 
-    path = RESULTS_PATHS[results_type]
-    for file in os.listdir(path):
-        if file.endswith(".csv"):
-            model_name = file.split(".")[0]
-            data = pd.read_csv(os.path.join(path, file))
-            plt.plot(data["n_features"], data[score], label=model_name, marker='o')
-
-    title = f"{SCORE_TITLES[score]} of Different Models - {SUBPLOT_TITLES[results_type]}"
-
-    plt.title(title)
-    plt.xticks(data["n_features"])
-    plt.xlabel("Number of SNPs", fontsize=12)
-    plt.ylabel(SCORE_TITLES[score], fontsize=12)
-    plt.legend()
-    plt.grid(True, which='both', linestyle='--')
-    plt.tight_layout()
-
-    os.makedirs("output/plots", exist_ok=True)
-    plt.savefig(f"output/plots/{title.replace(" ", "_").lower()}.png")
-    plt.close()
-
-
-def plot_all_results_subplots(score: str) -> None:
-    """
-    Plots a figure with multiple subplots comparing different models' scores for different number of features.
-
-    The data should already be saved and split in the following directories:
-    - results/test/standard
-    - results/train/standard
-    - results/test/tuned
-    - results/train/tuned
-
-    :param score: Score to be plotted. Should be one of the score columns in the CSV files.
-    """
-    # Reading all CSV files and concatenating them
-    data_list = []
-    for key, value in RESULTS_PATHS.items():
-        for file in os.listdir(value):
-            if not file.endswith(".csv"):
-                continue
-
-            data = pd.read_csv(os.path.join(value, file))
-            data["model"] = file.split(".")[0]
-            data["type"] = key
-            data_list.append(data)
-
-    data = pd.concat(data_list, ignore_index=True)
-    data["n_features"] = data["n_features"].astype(str)
+    ax_title = title if title else f"Model Comparison ({SCORE_TITLES[score]})"
+    ax_title += f"\n{subtitle}" if subtitle else ""
+    n_features = next(iter(results_dict.values()))["n_features"]
     
-    main_title = "Standard vs Tuned Comparison (Train and Test)"
+    ax.set_title(f"{ax_title}")
+    ax.set_xticks(n_features)
+    ax.set_xlabel("Number of SNPs", fontsize=12)
+    ax.set_ylabel(SCORE_TITLES[score], fontsize=12)
+    ax.legend()
+    ax.grid(True, which='both', linestyle='--')
+
+    if path:
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fig = ax.get_figure()
+        fig.set_size_inches(10, 6)
+        fig.tight_layout()
+        fig.savefig(path)
+        plt.close(fig)
+
+
+def plot_eval_summary(
+        mode_results: EvalSummaryDict,
+        score: str,
+        path: PathLike
+    ) -> None:
+    """
+    Plot the summary of the evaluation results.
+
+    :param mode_results: Dictionary containing the results for each mode (train/test, standard/tuned).
+    :param score: Score to be plotted. Should be one of the score columns in the CSV files.
+    :param path: Path to save the plot.
+    """
     fig, axes = plt.subplots(2, 2, figsize=(13, 8), sharex=True, sharey=True)
-    fig.suptitle(main_title, fontsize=18)
-
-    # Plotting subplots
-    for i, (key, value) in enumerate(RESULTS_PATHS.items()):
-        ax = axes[i // 2, i % 2]
-        
-        for model in data["model"].unique():
-            model_data = data[(data["model"] == model) & (data["type"] == key)]
-            ax.plot(model_data["n_features"], model_data[score], label=model, marker='o')
-        ax.set_title(SUBPLOT_TITLES[key])
-        # ax.set_ylim(0.5, 1.025)
-        ax.grid(True, which='both', linestyle='--')
-        ax.legend()
-        
-        if i == 0 or i == 1:
-            ax.tick_params(axis='x', which='both', length=0)
-        if i == 1 or i == 3:
-            ax.tick_params(axis='y', which='both', length=0) 
+    fig.suptitle("Standard vs Tuned Comparison (Test and Train)", fontsize=18)
     
+    subtitles = list(mode_results.keys())
+    flat_axes = axes.flatten()
+    for ax, subtitle in zip(flat_axes, subtitles):
+        plot_result(ax, mode_results[subtitle], score, title=subtitle, subtitle=None)
+        ax.set_xlabel(None)
+        ax.set_ylabel(None)
+
     fig.text(0.5, 0.02, "Number of SNPs", ha='center', va='center', fontsize=14)
     fig.text(0.03, 0.5, SCORE_TITLES[score], ha='center', va='center', rotation='vertical', fontsize=14)
     plt.tight_layout(rect=[0.03, 0.03, 1, 1])
-    
-    os.makedirs("output/plots", exist_ok=True)
-    plt.savefig(f"output/plots/{main_title.replace(' ', '_').lower()}.png")
+
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(path)
     plt.close()
-
-
-def plot_umap_projection(data_path: str) -> None:
-    """
-    Plot the UMAP projection of the data with the selected features.
-
-    Load the selectors from the disk and perform same transformations as in the evaluate_models.py script. Then, reduce
-    the dimensionality of the data with UMAP and save the plot at the plots/umap folder.
-
-    :param data_path: Path to the CSV file with the data.
-    """
-    df = load_data(data_path)
-
-    for i in [3, *range(5, 51, 5)]:
-        with open(f"output/models/RFE_{i}feats.pkl", "rb") as f:
-            selector = pickle.load(f)
-
-        X = df.drop(columns=["risk"])
-        y = df["risk"]
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
-        X_train, X_test = preprocess_data(X_train, X_test)
-
-        X_train = selector.transform(X_train)
-        X_test = selector.transform(X_test)
-        X = np.concatenate((X_train, X_test))
-        y = np.concatenate((y_train, y_test))
-
-        reducer = UMAP()
-        X_embedded = reducer.fit_transform(X)
-
-        scatter = plt.scatter(X_embedded[:, 0], X_embedded[:, 1], c=y, cmap='viridis')
-        plt.title(f"UMAP projection of the data\n({selector.n_features_} selected features)")
-        plt.gca().set_aspect('equal', 'datalim')
-        plt.grid(False)
-
-        handles, _ = scatter.legend_elements()
-        plt.legend(handles, ["Low Risk", "High Risk"], title="Risk")
-        plt.tight_layout()
-
-        os.makedirs("output/plots/umap", exist_ok=True)
-        plt.savefig(f"output/plots/umap/UMAP_{selector.n_features_}feats.png")
-        plt.clf()
-        plt.close()
 
 
 def plot_shap(
         X_train: pd.DataFrame | np.ndarray,
         X_test: pd.DataFrame | np.ndarray,
         X_columns: pd.Index,
+        selector: RFE,
+        features_array: list[int],
         models_path: str,
         comparison_metric: str = "roc_auc"
     ) -> None:
@@ -183,33 +135,29 @@ def plot_shap(
     :param models_path: Path to the directory containing the model files.
     :param comparison_metric: Metric to use for comparing models. Defaults to "roc_auc".
     """
-    selectors_names = os.listdir(f"{models_path}/selectors")
-
+    # TODO: Refactor this function to uncouple the directory handling from the actual plotting logic.
     print("Plotting SHAP values...")
-    for selector_name in selectors_names:
-        with open(f"{models_path}/selectors/{selector_name}", "rb") as f:
-            selector = pickle.load(f)
-
-        paths = (os.path.join(models_path, "standard"), os.path.join(models_path, "tuned"))
-        model_standard, score_standard = get_best_model(selector.n_features_, paths[0], "output/results/test/standard/", comparison_metric)
-        model_tuned, score_tuned       = get_best_model(selector.n_features_, paths[1], "output/results/test/tuned/", comparison_metric)
-        model_path = f"tuned/{model_tuned}" if score_tuned > score_standard else f"standard/{model_standard}"
+    for n_feats in features_array:
+        path = Path(models_path) / "standard"
+        results_path = "output/results/test/standard/"
+        model_standard, _ = get_best_model(n_feats, path, results_path, comparison_metric)
+        model_path = f"standard/{model_standard}"
 
         with open(f"{models_path}/{model_path}", "rb") as f:
             model = pickle.load(f)
-        print(f"{model.__class__.__name__} - {selector.n_features_} features")
+        print(f"{get_model_name(model, short=True)} - {n_feats} features")
 
-        X_train_selected = selector.transform(X_train)
-        X_test_selected = selector.transform(X_test)
+        X_train_selected, _ = extract_subset(selector, X_train, n_feats)
+        X_test_selected, feat_indices = extract_subset(selector, X_test, n_feats)
         shap_values = calculate_shap_values(model, X_train_selected, X_test_selected)
 
-        features_names = X_columns[selector.support_]
+        features_names = X_columns[feat_indices]
         shap.summary_plot(shap_values, X_test_selected, feature_names=features_names, show=False)
-        plt.title(f"SHAP values of the {model.__class__.__name__} model")
+        plt.title(f"SHAP values of the {get_model_name(model, short=True)} model")
         plt.tight_layout()
 
         os.makedirs("output/plots/shap", exist_ok=True)
-        plt.savefig(f"output/plots/shap/{selector.n_features_}feats.png")
+        plt.savefig(f"output/plots/shap/{n_feats}feats.png")
         plt.clf()
         plt.close()
 
@@ -263,7 +211,7 @@ def get_best_model(
     best_score = 0
     best_model = ""
     for model_name in models_names:
-        name = model_name.split("_")[0]
+        name = get_model_name(model_name.split("_")[0], short=True)
         results = pd.read_csv(f"{results_path}/{name}.csv")
         score = results.loc[results["n_features"] == n_feats, comparison_metric].values[0]
         if score > best_score:
@@ -271,3 +219,33 @@ def get_best_model(
             best_model = model_name
 
     return best_model, best_score
+
+
+def plot_evals(
+    plots_path: PathLike, 
+    results_standard: EvalResultsDict,
+    results_tuned: EvalResultsDict,
+    eval_metric: str
+    ) -> None:
+    """
+    Plot the evaluation results for the standard and tuned models.
+
+    :param plots_path: Path to the directory where the plots will be saved.
+    :param results_standard: Dictionary containing the results for the standard models.
+    :param results_tuned: Dictionary containing the results for the tuned models.
+    :param eval_metric: Metric to be plotted. Should be one of the score columns in the CSV files.
+    """
+    eval_summary = {
+        "Test (Standard)": {model_name: sets["test"] for model_name, sets in results_standard.items()},
+        "Train (Standard)": {model_name: sets["train"] for model_name, sets in results_standard.items()},
+        "Test (Tuned)": {model_name: sets["test"] for model_name, sets in results_tuned.items()},
+        "Train (Tuned)": {model_name: sets["train"] for model_name, sets in results_tuned.items()},
+    }
+    for eval_set, result in eval_summary.items():
+        fig_filename = f"{eval_set}.png".lower().replace(" ", "_").replace("(", "").replace(")", "")
+        path = plots_path / fig_filename
+        ax = plt.gca()
+        plot_result(ax, result, eval_metric, "ROC AUC of Different Models", eval_set, path)
+
+    path = plots_path / "summary.png"
+    plot_eval_summary(eval_summary, eval_metric, path)

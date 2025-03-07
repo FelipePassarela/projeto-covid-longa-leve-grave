@@ -1,10 +1,12 @@
 from typing import List, Tuple
+
 import numpy as np
 import pandas as pd
+from imblearn.over_sampling import ADASYN
 from sklearn.discriminant_analysis import StandardScaler
 from sklearn.feature_selection import RFE, SelectorMixin
-from sklearn.impute import SimpleImputer
-from imblearn.over_sampling import ADASYN
+from sklearn.impute import KNNImputer, SimpleImputer
+
 from utils.model_dumping import load_rfe_selector, save_model
 
 
@@ -38,6 +40,7 @@ def preprocess_data(
     :return: X_train and X_test preprocessed.
     """
     imputer = SimpleImputer(strategy="most_frequent")
+    # imputer = KNNImputer(n_neighbors=5)
     X_train = imputer.fit_transform(X_train)
     X_test = imputer.transform(X_test)
 
@@ -53,7 +56,8 @@ def train_selectors(
         X_test: pd.DataFrame | np.ndarray, 
         y_train: pd.Series | np.ndarray, 
         y_test: pd.Series | np.ndarray, 
-        features_array: List[int]
+        features_array: List[int],
+        on_whole_dataset: bool = False
     ) -> List[RFE]:
     """
     Train the Recursive Feature Elimination (RFE) selectors with different number of features.
@@ -65,6 +69,7 @@ def train_selectors(
     :param y_train: The training labels.
     :param y_test: The testing labels.
     :param features_array: The number of features to be selected by each selector.
+    :param on_whole_dataset: Whether to fit the selector in the whole dataset.
 
     :return: An array with the trained selectors for different number of features.
     """
@@ -73,9 +78,7 @@ def train_selectors(
     for selector in selector_array:
         if hasattr(selector, "n_features_"):  # If it was already trained,
             continue
-
-        print(f"\rTraining {selector.__class__.__name__} with {selector.n_features_to_select} feature(s)...", end="")
-        fit_selector(X_train, X_test, y_train, y_test, selector)
+        fit_selector(X_train, X_test, y_train, y_test, selector, on_whole_dataset=on_whole_dataset)
         save_model(selector, selector.n_features_to_select, "output/models/selectors")
     print()
 
@@ -87,7 +90,8 @@ def fit_selector(
         X_test: pd.DataFrame | np.ndarray, 
         y_train: pd.Series | np.ndarray, 
         y_test: pd.Series | np.ndarray, 
-        selector: SelectorMixin
+        selector: SelectorMixin,
+        on_whole_dataset: bool = False
     ) -> None:
     """
     Fit the selector in the whole dataset.
@@ -97,13 +101,16 @@ def fit_selector(
     :param y_train: The training labels.
     :param y_test: The testing labels.
     :param selector: The selector to be fitted.
+    :param on_whole_dataset: Whether to fit the selector in the whole dataset.
     """
-    selector.fit(X_train, y_train)
-
-    # We decide do fit the selector in the whole dataset
-    # X = np.concatenate((X_train, X_test), axis=0)
-    # y = np.concatenate((y_train, y_test), axis=0)
-    # selector.fit(X, y)
+    print(f"Fitting {selector.__class__.__name__} with {selector.n_features_to_select} feature(s)...")
+    if on_whole_dataset:
+        # We decided to fit the selector on the whole dataset.
+        X = np.concatenate((X_train, X_test), axis=0)
+        y = np.concatenate((y_train, y_test), axis=0)
+        selector.fit(X, y)
+    else:
+        selector.fit(X_train, y_train)
 
 
 def oversample(

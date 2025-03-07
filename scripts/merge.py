@@ -1,5 +1,6 @@
-import pandas as pd
 import os
+
+import pandas as pd
 
 
 def merge(info_path: str, genom_path: str, save_path: str, column_name: str):
@@ -33,8 +34,8 @@ def merge(info_path: str, genom_path: str, save_path: str, column_name: str):
 
 if __name__ == "__main__":
     merge(
-        "data/28_01/longa/nao_vacinados_uma_dose/Planilha - NAO_VAC_1_COVID_LONGA.csv",
-        "data/28_01/longa/nao_vacinados_uma_dose/matriz_genotipos_no_vac_COVID_LONGA_UMA__DOSE_filtrado.csv",
-        "data/28_01/longa/nao_vacinados_uma_dose/matriz_genotipos_no_vac_COVID_LONGA_UMA__DOSE_filtrado.csv",
-        "Long Covid"
+        "data/mion/geral/Bloco Dor - GERAL.csv",
+        "data/mion/geral/MATRIZ_GERAL_FILTRADO.csv",
+        "data/mion/geral/MATRIZ_GERAL_FILTRADO_merged.csv",
+        "Pain Block_175"
     )

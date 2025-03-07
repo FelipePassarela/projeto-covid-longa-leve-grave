@@ -13,12 +13,18 @@ Usage:
 __author__ = "Felipe dos Santos Passarela"
 __email__ = "felipepassarela11@gmail.com"
 
+import os
+from pathlib import Path
+
+from sklearn.feature_selection import RFE
 from sklearn.model_selection import train_test_split
+from sklearn.svm import SVC
+
 from utils.evaluate_models import evaluate_models
 from utils.models_and_params import get_model_and_params
-from utils.preprocessing import load_data, preprocess_data, train_selectors, oversample
-from utils.plot_results import plot_all_results_subplots, plot_results, plot_shap, plot_umap_projection
-
+from utils.plot_results import plot_evals, plot_shap
+from utils.preprocessing import (fit_selector, load_data, oversample, preprocess_data,
+                                 train_selectors)
 
 FILE_NAME = "data/28_01/longa/nao_vacinados_uma_dose/matriz_genotipos_no_vac_COVID_LONGA_UMA__DOSE_filtrado.csv"
 TARGET = "Long Covid"
@@ -40,16 +46,18 @@ def main() -> None:
     5. Training and evaluating multiple models
     6. Generating performance plots and analysis visualizations
     """
-    df = load_data(FILE_NAME)
+    df = load_data(FILE_NAME)   
     X = df.drop(columns=[TARGET])
     y = df[TARGET]
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
     X_train, X_test = preprocess_data(X_train, X_test)
-    X_train, y_train = oversample(X_train, y_train)
+    # X_train, y_train = oversample(X_train, y_train)
 
+    selector_estim = SVC(kernel="linear", random_state=42)
+    selector = RFE(selector_estim, n_features_to_select=1)
     features_array = [1, 3, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
-    selector_array = train_selectors(X_train, X_test, y_train, y_test, features_array)
+    fit_selector(X_train, X_test, y_train, y_test, selector, on_whole_dataset=True)
 
     models_and_params = [
         get_model_and_params("logistic_regression"),
@@ -59,18 +67,52 @@ def main() -> None:
         get_model_and_params("xgboost")
     ]
 
-    evaluate_models(X_train, X_test, y_train, y_test, X.columns, selector_array, models_and_params, False)
-    evaluate_models(X_train, X_test, y_train, y_test, X.columns, selector_array, models_and_params, True)
+    models_path = Path("output/models/")
+    results_path = Path("output/results/")
+    plots_path = Path("output/plots/")
 
-    evaluation_metric = "roc_auc"
-    plot_results("train_standard", evaluation_metric)
-    plot_results("test_standard", evaluation_metric)
-    plot_results("train_tuned", evaluation_metric)
-    plot_results("test_tuned", evaluation_metric)
-    plot_all_results_subplots(evaluation_metric)
-    plot_shap(X_train, X_test, X.columns, "output/models/", evaluation_metric)
-    # plot_umap_projection(FILE_NAME)
+    results_standard = evaluate_models(
+        X_train, X_test, y_train, y_test, X.columns, 
+        selector, features_array, models_and_params,
+        models_path, results_path, tune=False
+    )
+    results_tuned = evaluate_models(
+        X_train, X_test, y_train, y_test, X.columns, 
+        selector, features_array, models_and_params,
+        models_path, results_path, tune=True
+    )
+
+    eval_metric = "roc_auc"
+    plot_evals(plots_path, results_standard, results_tuned, eval_metric)
+    plot_shap(X_train, X_test, X.columns, selector, features_array, models_path, eval_metric)
 
 
 if __name__ == "__main__":
-    main()
+    import matplotlib
+
+    matplotlib.use("Agg")
+
+    def process_dataset(category, subcategory, dataset_name, target):
+        global FILE_NAME, TARGET
+        FILE_NAME = f"data/{category}/{subcategory}/{dataset_name}"
+        TARGET = target
+        main()
+        
+        output_dir = f"{category}/{subcategory}"
+        os.makedirs(output_dir, exist_ok=True)
+        for file in os.listdir("output"):
+            os.rename(f"output/{file}", f"{output_dir}/{file}")
+
+    # TODO: Make the boxplot
+    # TODO: Make shap plot of SVM
+
+    datasets = [
+        ("dani", "geral", "MATRIZ_GERAL_FILTRADO_merged.csv", "Cardiovascular sequelae"),
+        # ("dani", "nao_vacinados", "matriz_genotipos_no_vac_COVID_GERAL_filtrado_merged.csv", "Cardiovascular sequelae"),
+
+        # ("mion", "geral", "MATRIZ_GERAL_FILTRADO_merged.csv", "Pain Block_175"),
+        # ("mion", "nao_vacinados", "matriz_genotipos_no_vac_COVID_GERAL_filtrado_merged.csv", "Pain Block_175"),
+    ]
+
+    for category, subcategory, file_name, target in datasets:
+        process_dataset(category, subcategory, file_name, target)

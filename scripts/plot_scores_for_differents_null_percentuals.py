@@ -1,6 +1,7 @@
 import os
-from matplotlib import pyplot as plt
+
 import pandas as pd
+from matplotlib import pyplot as plt
 
 
 def histogram_null_values(df: pd.DataFrame) -> None:

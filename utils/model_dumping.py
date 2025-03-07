@@ -1,11 +1,14 @@
 import os
 import pickle
+from os import PathLike
+from pathlib import Path
+
 from sklearn.base import BaseEstimator
 from sklearn.feature_selection import RFE, SelectorMixin
 from sklearn.svm import SVC
 
 
-def load_rfe_selector(n_features: int, path: str) -> RFE:
+def load_rfe_selector(n_features: int, path: PathLike) -> RFE:
     """
     Load the Recursive Feature Elimination (RFE) selector with a specific number of features.
 
@@ -16,7 +19,7 @@ def load_rfe_selector(n_features: int, path: str) -> RFE:
 
     :return: The RFE selector.
     """
-    model_file = f"{path}/RFE_{n_features}feats.pkl"
+    model_file = Path(f"{path}/RFE_{n_features}feats.pkl")
     try:
         with open(model_file, 'rb') as file:
             return pickle.load(file)
@@ -27,7 +30,7 @@ def load_rfe_selector(n_features: int, path: str) -> RFE:
 def save_model(
         model: BaseEstimator | SelectorMixin,
         n_features: int, 
-        path: str
+        path: PathLike
     ) -> None:
     """
     Save the model in the disk.
@@ -37,6 +40,6 @@ def save_model(
     :param path: The path to the folder where the model will be saved.
     """
     os.makedirs(path, exist_ok=True)
-    model_file = f"{path}/{model.__class__.__name__}_{n_features}feats.pkl"
+    model_file = Path(f"{path}/{model.__class__.__name__}_{n_features}feats.pkl")
     with open(model_file, 'wb') as file:
         pickle.dump(model, file)
