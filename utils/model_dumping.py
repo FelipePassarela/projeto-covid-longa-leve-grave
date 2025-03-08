@@ -7,6 +7,8 @@ from sklearn.base import BaseEstimator
 from sklearn.feature_selection import RFE, SelectorMixin
 from sklearn.svm import SVC
 
+from utils.models_and_params import get_model_name
+
 
 def load_rfe_selector(n_features: int, path: PathLike) -> RFE:
     """
@@ -40,6 +42,7 @@ def save_model(
     :param path: The path to the folder where the model will be saved.
     """
     os.makedirs(path, exist_ok=True)
-    model_file = Path(f"{path}/{model.__class__.__name__}_{n_features}feats.pkl")
+    model_name = get_model_name(model, short=True)
+    model_file = Path(f"{path}/{model_name}_{n_features}feats.pkl")
     with open(model_file, 'wb') as file:
         pickle.dump(model, file)
