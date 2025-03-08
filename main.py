@@ -16,15 +16,15 @@ __email__ = "felipepassarela11@gmail.com"
 import os
 from pathlib import Path
 
+import numpy as np
 from sklearn.feature_selection import RFE
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 
-from utils.evaluate_models import evaluate_models
-from utils.models_and_params import get_model_and_params
-from utils.plot_results import plot_evals, plot_shap
-from utils.preprocessing import (fit_selector, load_data, oversample, preprocess_data,
-                                 train_selectors)
+from utils.evaluate_models import evaluate_cv, evaluate_models
+from utils.models_and_params import get_model_and_params, get_model_name
+from utils.plot_results import plot_boxplot, plot_evals, plot_shap, plot_shap_svm
+from utils.preprocessing import fit_selector, load_data, preprocess_data
 
 FILE_NAME = "data/28_01/longa/nao_vacinados_uma_dose/matriz_genotipos_no_vac_COVID_LONGA_UMA__DOSE_filtrado.csv"
 TARGET = "Long Covid"
@@ -41,18 +41,16 @@ def main() -> None:
     The workflow includes:
     1. Loading and preprocessing the data
     2. Splitting into train/test sets
-    3. Oversampling to balance classes
-    4. Feature selection using RFE
-    5. Training and evaluating multiple models
-    6. Generating performance plots and analysis visualizations
+    3. Feature selection using RFE
+    4. Training and evaluating multiple models
+    5. Generating performance plots and analysis visualizations
     """
-    df = load_data(FILE_NAME)   
+    df = load_data(FILE_NAME, TARGET)   
     X = df.drop(columns=[TARGET])
     y = df[TARGET]
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
-    X_train, X_test = preprocess_data(X_train, X_test)
-    # X_train, y_train = oversample(X_train, y_train)
+    X_train, X_test, y_train, y_test = preprocess_data(X_train, X_test, y_train, y_test, oversample=False)
 
     selector_estim = SVC(kernel="linear", random_state=42)
     selector = RFE(selector_estim, n_features_to_select=1)
@@ -70,6 +68,7 @@ def main() -> None:
     models_path = Path("output/models/")
     results_path = Path("output/results/")
     plots_path = Path("output/plots/")
+    eval_metric = "roc_auc"
 
     results_standard = evaluate_models(
         X_train, X_test, y_train, y_test, X.columns, 
@@ -82,9 +81,20 @@ def main() -> None:
         models_path, results_path, tune=True
     )
 
-    eval_metric = "roc_auc"
+    model_cv = SVC(random_state=42, probability=True)
+    results_cv = evaluate_cv(
+        np.concatenate([X_train, X_test]),
+        np.concatenate([y_train, y_test]),
+        model=model_cv,
+        selector=selector,
+        features_array=features_array,
+        scoring=eval_metric,
+        cv=5
+    )
+
     plot_evals(plots_path, results_standard, results_tuned, eval_metric)
     plot_shap(X_train, X_test, X.columns, selector, features_array, models_path, eval_metric)
+    plot_boxplot(results_cv, get_model_name(model_cv, short=True), plots_path, eval_metric)
 
 
 if __name__ == "__main__":
@@ -98,21 +108,23 @@ if __name__ == "__main__":
         TARGET = target
         main()
         
-        output_dir = f"{category}/{subcategory}"
+        output_dir = f"results/{category}/{subcategory}"
         os.makedirs(output_dir, exist_ok=True)
         for file in os.listdir("output"):
             os.rename(f"output/{file}", f"{output_dir}/{file}")
 
-    # TODO: Make the boxplot
-    # TODO: Make shap plot of SVM
-
     datasets = [
-        ("dani", "geral", "MATRIZ_GERAL_FILTRADO_merged.csv", "Cardiovascular sequelae"),
-        # ("dani", "nao_vacinados", "matriz_genotipos_no_vac_COVID_GERAL_filtrado_merged.csv", "Cardiovascular sequelae"),
+        ("grave", "geral", "merged.csv", "risk"),
+        ("grave", "nao_vacinados", "merged.csv", "risk"),
 
-        # ("mion", "geral", "MATRIZ_GERAL_FILTRADO_merged.csv", "Pain Block_175"),
-        # ("mion", "nao_vacinados", "matriz_genotipos_no_vac_COVID_GERAL_filtrado_merged.csv", "Pain Block_175"),
+        ("longa", "geral", "merged.csv", "Long_COVID"),
+        ("longa", "nao_vacinados", "merged.csv", "Long_COVID"),
+
+        ("dor", "nao_vacinados", "merged.csv", "Pain_Block"),
+        ("sistema_cardiovascular", "nao_vacinados", "merged.csv", "Cardiovascular_sequelae"),
+        ("sistema_nervoso", "nao_vacinados", "merged.csv", "Sist_Nerv_Per_"),
     ]
 
     for category, subcategory, file_name, target in datasets:
+        print(f"Processing dataset: {category}/{subcategory}/{file_name} with target: {target}")
         process_dataset(category, subcategory, file_name, target)

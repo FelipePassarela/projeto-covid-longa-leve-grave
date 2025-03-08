@@ -12,6 +12,7 @@ from matplotlib import pyplot as plt
 from sklearn.base import BaseEstimator
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import RFE
+from sklearn.svm import SVC
 from xgboost import XGBClassifier
 
 from utils.evaluate_models import EvalResultsDict, extract_subset
@@ -141,7 +142,7 @@ def plot_shap(
         path = Path(models_path) / "standard"
         results_path = "output/results/test/standard/"
         model_standard, _ = get_best_model(n_feats, path, results_path, comparison_metric)
-        model_path = f"standard/{model_standard}"
+        model_path = f"standard/{model_standard}_{n_feats}feats.pkl"
 
         with open(f"{models_path}/{model_path}", "rb") as f:
             model = pickle.load(f)
@@ -158,6 +159,52 @@ def plot_shap(
 
         os.makedirs("output/plots/shap", exist_ok=True)
         plt.savefig(f"output/plots/shap/{n_feats}feats.png")
+        plt.clf()
+        plt.close()
+
+
+def plot_shap_svm(
+        X_train: pd.DataFrame | np.ndarray,
+        X_test: pd.DataFrame | np.ndarray,
+        X_columns: pd.Index,
+        selector: RFE,
+        features_array: list[int],
+        models_path: str,
+        comparison_metric: str = "roc_auc"
+    ) -> None:
+    """
+    Plot the best model's SHAP values for different number of features.
+
+    Load the selectors from the disk and perform same transformations as in the evaluate_models.py script. Then, calculate
+    the SHAP values for the best model and plot them.
+
+    :param X_train: The training data.
+    :param X_test: The testing data.
+    :param X_columns: The columns of the data.
+    :param models_path: Path to the directory containing the model files.
+    :param comparison_metric: Metric to use for comparing models. Defaults to "roc_auc".
+    """
+    # TODO: Refactor this function to uncouple the directory handling from the actual plotting logic.
+    print("Plotting SVM SHAP values...")
+    for n_feats in features_array:
+        model_name = get_model_name(SVC(), short=True)
+        model_path = f"standard/{model_name}_{n_feats}feats.pkl"
+
+        with open(f"{models_path}/{model_path}", "rb") as f:
+            model = pickle.load(f)
+        print(f"{get_model_name(model, short=True)} - {n_feats} features")
+
+        X_train_selected, _ = extract_subset(selector, X_train, n_feats)
+        X_test_selected, feat_indices = extract_subset(selector, X_test, n_feats)
+        shap_values = calculate_shap_values(model, X_train_selected, X_test_selected)
+
+        features_names = X_columns[feat_indices]
+        shap.summary_plot(shap_values, X_test_selected, feature_names=features_names, show=False)
+        plt.title(f"SHAP values of the {get_model_name(model, short=True)} model")
+        plt.tight_layout()
+
+        os.makedirs(f"output/plots/shap/svm", exist_ok=True)
+        plt.savefig(f"output/plots/shap/svm/{n_feats}feats.png")
         plt.clf()
         plt.close()
 
@@ -210,13 +257,13 @@ def get_best_model(
     
     best_score = 0
     best_model = ""
-    for model_name in models_names:
-        name = get_model_name(model_name.split("_")[0], short=True)
+    for name in models_names:
+        name = name.split("_")[0]
         results = pd.read_csv(f"{results_path}/{name}.csv")
         score = results.loc[results["n_features"] == n_feats, comparison_metric].values[0]
         if score > best_score:
             best_score = score
-            best_model = model_name
+            best_model = name
 
     return best_model, best_score
 
@@ -249,3 +296,39 @@ def plot_evals(
 
     path = plots_path / "summary.png"
     plot_eval_summary(eval_summary, eval_metric, path)
+
+
+def plot_boxplot(
+        results_df: pd.DataFrame, 
+        model_name: str, 
+        plots_path: PathLike, 
+        scoring="roc_auc",
+    ) -> plt.Figure:
+    """
+    Plot the boxplot of the results for different number of features.
+
+    :param results_df: DataFrame containing the results for different number of features.
+    :param model_name: Name of the model.
+    :param plots_path: Path to the directory where the plots will be saved.
+    :param scoring: Metric to be plotted. Defaults to "roc_auc".
+
+    :return: The figure containing the boxplot.
+    """
+
+    scores_per_feature = {n: scores for n, scores in zip(results_df["n_features"], results_df["scores"])}
+    score_title = SCORE_TITLES.get(scoring, scoring)
+
+    cv = results_df["scores"].apply(len).max()
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.boxplot(list(scores_per_feature.values()), tick_labels=list(scores_per_feature.keys()))
+    ax.set_xlabel("Number of SNPs", fontsize=12)
+    ax.set_ylabel(score_title, fontsize=12)
+    ax.set_title(f"Distribution of {score_title} for {model_name} ({cv}-fold CV)", fontsize=14)
+    plt.tight_layout()
+
+    fig_path = Path(plots_path) / f"boxplot_{model_name}.png"
+    fig_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(fig_path)
+
+    return fig

@@ -9,12 +9,11 @@ from sklearn.base import BaseEstimator
 from sklearn.feature_selection import RFE
 from sklearn.metrics import (accuracy_score, confusion_matrix, f1_score,
                              roc_auc_score)
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, KFold
 from sklearn.svm import SVC
 
 from utils.model_dumping import save_model
 from utils.models_and_params import HyperParamGrid, get_model_name
-from utils.preprocessing import fit_selector
 
 EvalResultsDict = Dict[str, Dict[str, pd.DataFrame]]
 
@@ -40,6 +39,7 @@ def evaluate_models(
     :param y_train: The training labels.
     :param y_test: The testing labels.
     :param X_columns: The columns of the data.
+    :param selector: The fitted feature selector.
     :param feature_array: The feature indexes for each number of features to be selected.
     :param models_and_params: The models and hyperparameters.
     :param model_path: The path to save the models.
@@ -110,6 +110,57 @@ def evaluate_models(
     return results
 
 
+def evaluate_cv(
+        X: pd.DataFrame | np.ndarray, 
+        y: pd.Series | np.ndarray, 
+        model: BaseEstimator, 
+        selector: RFE,
+        features_array: Sequence[int], 
+        scoring: str = "roc_auc",
+        cv: int = 5
+    ) -> pd.DataFrame:
+    """
+    Evaluate the model with cross-validation.
+
+    :param X: The data.
+    :param y: The labels.
+    :param model: The machine learning model to evaluate.
+    :param selector: The feature selector.
+    :param features_array: The number of features to evaluate.
+    :param scoring: The scoring metric.
+    :param cv: The number of cross-validation folds.
+        
+    :return: A DataFrame containing the cross-validation results.
+    """
+    results = []
+    for n_feats in features_array:
+        scores = []
+        kf = KFold(n_splits=cv, shuffle=True, random_state=42)
+
+        for fold, (train_idx, val_idx) in enumerate(kf.split(X)):
+            print(f"Fold {fold + 1}/{cv}")
+
+            X_train, X_test = X[train_idx], X[val_idx]
+            y_train, y_test = y[train_idx], y[val_idx]
+
+            X_train_selected, _ = extract_subset(selector, X_train, n_feats)
+            X_test_selected, _ = extract_subset(selector, X_test, n_feats)
+
+            model = model.__class__(**model.get_params())  # Reset model to initial state
+
+            model.fit(X_train_selected, y_train)
+            scoring_fn = get_scoring_fn(scoring)
+            if scoring == "roc_auc":
+                score = scoring_fn(y_test, model.predict_proba(X_test_selected)[:, 1])
+            else:
+                score = scoring_fn(y_test, model.predict(X_test_selected))
+            scores.append(score)
+
+        results.append({'n_features': n_feats, 'scores': scores})
+
+    return pd.DataFrame(results)
+
+
 def save_model_results(results: pd.DataFrame, path: PathLike, tuned: bool = False) -> None:
     """
     Save the results of the models in the disk.
@@ -131,17 +182,35 @@ def save_model_results(results: pd.DataFrame, path: PathLike, tuned: bool = Fals
         test_df.to_csv(test_path / f"{model_name}.csv", index=False)
 
 
-def extract_subset(selector, X, k: int):
+def extract_subset(selector, X, n_feats: int):
     """
     Extract the subset of features selected by the selector.
 
     :param selector: The selector.
     :param X: The data.
-    :param k: The number of features to be selected.
+    :param n_feats: The number of features to select.
 
     :return: The subset of features selected by the selector and
                 the indices of the selected features.
     """
-    feature_indices = np.argsort(selector.ranking_)[:k]
+    feature_indices = np.argsort(selector.ranking_)[:n_feats]
     subset = X[:, feature_indices]
     return subset, feature_indices
+
+
+def get_scoring_fn(scoring: str):
+    """
+    Get the scoring function based on the metric.
+
+    :param scoring: The metric to evaluate.
+
+    :return: The scoring function.
+    """
+    if scoring == "accuracy":
+        return accuracy_score
+    elif scoring == "f1":
+        return f1_score
+    elif scoring == "roc_auc":
+        return roc_auc_score
+    else:
+        raise ValueError(f"Unknown scoring metric: {scoring}")
