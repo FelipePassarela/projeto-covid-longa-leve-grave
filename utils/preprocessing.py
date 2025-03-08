@@ -10,34 +10,42 @@ from sklearn.impute import KNNImputer, SimpleImputer
 from utils.model_dumping import load_rfe_selector, save_model
 
 
-def load_data(file_path: str, threshold: float = 10.0) -> pd.DataFrame:
+def load_data(file_path: str, target: str, threshold: float = 10.0) -> pd.DataFrame:
     """
     Load data from a CSV file and preprocess it by dropping columns with more 
     than a specified percentage of missing values.
 
     :param file_path: Path to the CSV file.
+    :param target: The target variable for the dataset.
     :param threshold: Maximum percentage of missing values allowed for a column to be kept.
 
     :return: The dataframe with the data.
     """
     df = pd.read_csv(file_path)
+    df = df.dropna(subset=[target])
     missing_percentage = df.isnull().mean() * 100
     df = df.drop(columns=missing_percentage[missing_percentage > threshold].index)
-    df = df.drop(columns=["patient_id"])
+    df = df.drop(columns=["id"])
     return df
 
 
 def preprocess_data(
         X_train: pd.DataFrame | np.ndarray, 
-        X_test: pd.DataFrame | np.ndarray
-    ) -> Tuple[np.ndarray, np.ndarray]:
+        X_test: pd.DataFrame | np.ndarray,
+        y_train: pd.Series | np.ndarray,
+        y_test: pd.Series | np.ndarray,
+        oversample: bool = True
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Preprocess the data by imputing the most frequent value and scaling it.
 
     :param X_train: The training data.
     :param X_test: The testing data.
+    :param y_train: The training labels.
+    :param y_test: The testing labels.
+    :param oversample: Whether to oversample the minority class or not.
 
-    :return: X_train and X_test preprocessed.
+    :return: X_train, X_test, y_train, y_test
     """
     imputer = SimpleImputer(strategy="most_frequent")
     # imputer = KNNImputer(n_neighbors=5)
@@ -48,7 +56,10 @@ def preprocess_data(
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
 
-    return X_train, X_test
+    if oversample:
+        X_train, y_train = oversample(X_train, y_train)
+
+    return X_train, X_test, y_train, y_test
 
 
 def train_selectors(
@@ -125,7 +136,6 @@ def oversample(
     
     :return: The oversampled training data and labels.
     """
-
     adasyn = ADASYN(sampling_strategy='minority', random_state=42)
     X_train_resamp, y_train_resamp = adasyn.fit_resample(X_train, y_train)
     return X_train_resamp, y_train_resamp
