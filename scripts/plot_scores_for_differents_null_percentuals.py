@@ -27,6 +27,10 @@ def histogram_null_values(df: pd.DataFrame) -> None:
     plt.axvline(percentile_99, color='r', linestyle='dashed', linewidth=1)
     plt.text(percentile_99 * 1.01, plt.ylim()[1] * 0.95, f'99th Percentile: {percentile_99:.2f}%', color='r')
 
+    # draw a line on the x-axis at 10% missing values
+    plt.axvline(10, color='g', linestyle='dashed', linewidth=1)
+    plt.text(10 * 1.01, plt.ylim()[1] * 0.9, '10% missing values', color='g')
+
     path = f"output/{title.replace(' ', '_')}.png"
     os.makedirs("output", exist_ok=True)
     plt.savefig(path)
@@ -34,5 +38,5 @@ def histogram_null_values(df: pd.DataFrame) -> None:
 
 
 if __name__ == "__main__":
-    df = pd.read_csv("data/matriz_GERAL.csv")
+    df = pd.read_csv("data/genom.csv")
     histogram_null_values(df)
