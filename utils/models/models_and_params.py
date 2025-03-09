@@ -2,6 +2,7 @@ from typing import Any, Dict, List, Tuple
 
 from sklearn.base import BaseEstimator
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.feature_selection import RFE
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
@@ -71,7 +72,7 @@ def get_model_and_params(model_name: str) -> Tuple[BaseEstimator, HyperParamGrid
         raise ValueError(f"Model '{model_name}' is not supported. Choose from {list(models_params.keys())}.")
     
 
-def get_model_name(model: BaseEstimator | str, short: bool = False) -> str:
+def get_model_name(model: BaseEstimator | RFE | str, short: bool = False) -> str:
     """
     Return the model name based on the model object.
 
@@ -86,7 +87,8 @@ def get_model_name(model: BaseEstimator | str, short: bool = False) -> str:
         SVC: "Support Vector Machine",
         KNeighborsClassifier: "K-Nearest Neighbors",
         RandomForestClassifier: "Random Forest",
-        XGBClassifier: "XGBoost"
+        XGBClassifier: "XGBoost",
+        RFE: "Recursive Feature Elimination"
     }
 
     short_names = {
@@ -94,7 +96,8 @@ def get_model_name(model: BaseEstimator | str, short: bool = False) -> str:
         SVC: "SVM",
         KNeighborsClassifier: "KNN",
         RandomForestClassifier: "RF",
-        XGBClassifier: "XGB"
+        XGBClassifier: "XGB",
+        RFE: "RFE"
     }
 
     names = short_names if short else long_names
