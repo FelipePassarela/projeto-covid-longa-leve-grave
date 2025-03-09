@@ -20,26 +20,44 @@ from utils.models.models_and_params import get_model_name
 def _calculate_shap_values(
         model: BaseEstimator,
         X_train_selected: np.ndarray,
-        X_test_selected: np.ndarray
-    ) -> np.ndarray:
+        X_test_selected: np.ndarray,
+        feature_names: pd.Index
+    ) -> shap.Explanation:
     """
     Calculate SHAP values for the given model and data.
 
     :param model: The trained model to explain
     :param X_train_selected: Training data used for background distribution
     :param X_test_selected: Test data to explain
+    :param feature_names: Names of the features
 
     :return: SHAP values for the test data
     """
     if isinstance(model, XGBClassifier):
-        shap_values = shap.TreeExplainer(model).shap_values(X_test_selected)
+        explainer = shap.TreeExplainer(model)
+        raw_shap_values = explainer.shap_values(X_test_selected)
     elif isinstance(model, RandomForestClassifier):
-        shap_values = shap.TreeExplainer(model).shap_values(X_test_selected)
-        shap_values = np.array(shap_values)[:, :, 1]
+        explainer = shap.TreeExplainer(model)
+        raw_shap_values = explainer.shap_values(X_test_selected)
+        raw_shap_values = np.array(raw_shap_values)[:, :, 1]
     else:
         background = shap.sample(X_train_selected, 100)
         explainer = shap.KernelExplainer(model.predict, background)
-        shap_values = explainer.shap_values(X_test_selected)
+        raw_shap_values = explainer.shap_values(X_test_selected)
+    
+    exp_val = explainer.expected_value
+    if isinstance(exp_val, float):
+        base_value = np.full(X_test_selected.shape[0], exp_val)
+    else:
+        base_value = exp_val
+        
+    shap_values = shap.Explanation(
+        values=raw_shap_values,
+        base_values=base_value,
+        data=X_test_selected,
+        feature_names=feature_names
+    )
+
     return shap_values
 
 
@@ -63,11 +81,12 @@ def _plot_shap(
     :param n_feats: Number of features to select.
     :param save_path: Path to the directory where the plots will be saved.
     """
+
     X_train_selected, _ = extract_subset(selector, X_train, n_feats)
     X_test_selected, feat_indices = extract_subset(selector, X_test, n_feats)
-    shap_values = _calculate_shap_values(model, X_train_selected, X_test_selected)
-
     features_names = X_columns[feat_indices]
+    shap_values = _calculate_shap_values(model, X_train_selected, X_test_selected, features_names)
+
     shap.summary_plot(shap_values, X_test_selected, feature_names=features_names, show=False)
     plt.title(f"SHAP values of the {get_model_name(model, short=True)} model")
     plt.tight_layout()
@@ -148,7 +167,7 @@ def plot_shaps(
         _plot_shap(X_train, X_test, X_columns, model, selector, n_feats, save_path)
 
 
-def _plot_shap_feature_clustering(
+def _plot_shap_bar_plot(
         X_train: pd.DataFrame | np.ndarray,
         X_test: pd.DataFrame | np.ndarray,
         y_test: pd.Series | np.ndarray,
@@ -170,13 +189,14 @@ def _plot_shap_feature_clustering(
     :param n_feats: Number of features to select.
     :param save_path: Path to the directory where the plots will be saved.
     """
+
     X_train_selected, _ = extract_subset(selector, X_train, n_feats)
     X_test_selected, feat_indices = extract_subset(selector, X_test, n_feats)
-    shap_values = _calculate_shap_values(model, X_train_selected, X_test_selected)
-
     features_names = X_columns[feat_indices]
-    clustering = shap.utils.hclust(X_test_selected, y_test)
-    shap.bar_plot(shap_values, clustering=clustering, feature_names=features_names, show=False)
+    shap_values = _calculate_shap_values(model, X_train_selected, X_test_selected, features_names)
+
+    clustering = shap.utils.hclust(X_test_selected, y_test) if n_feats > 1 else None
+    shap.plots.bar(shap_values, clustering=clustering, show=False, max_display=21)
     plt.title(f"SHAP values of the {get_model_name(model, short=True)} model")
     plt.tight_layout()
 
@@ -187,7 +207,7 @@ def _plot_shap_feature_clustering(
     plt.close()
 
 
-def plot_shaps_feature_clustering(
+def plot_shaps_bar_plot(
         X_train: pd.DataFrame | np.ndarray,
         X_test: pd.DataFrame | np.ndarray,
         y_test: pd.Series | np.ndarray,
@@ -222,7 +242,7 @@ def plot_shaps_feature_clustering(
             model = pickle.load(f)
         print(f"{get_model_name(model, short=True)} - {n_feats} features")
 
-        _plot_shap_feature_clustering(X_train, X_test, y_test, X_columns, model, selector, n_feats, save_path)
+        _plot_shap_bar_plot(X_train, X_test, y_test, X_columns, model, selector, n_feats, save_path)
 
 
 def _get_trained_model_path(
