@@ -19,14 +19,14 @@ def load_rfe_selector(n_features: int, path: PathLike) -> RFE:
     :param n_features: The number of features to be selected.
     :param path: The path to the folder where the selector is saved.
 
-    :return: The RFE selector.
+    :return: The RFE selector or None if it does not exist.
     """
-    model_file = Path(f"{path}/RFE_{n_features}feats.pkl")
+    model_file = Path(path) / f"RFE_{n_features}feats.pkl"
     try:
         with open(model_file, 'rb') as file:
             return pickle.load(file)
     except FileNotFoundError:
-        return RFE(SVC(kernel="linear", random_state=42), n_features_to_select=n_features)
+        return None
 
 
 def save_model(
