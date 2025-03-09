@@ -1,8 +1,8 @@
 *.csv
-models/
-plots/
-backup/
-results/
+./models/
+./plots/
+./backup/
+./results/
 __pycache__/
 data/
 resultados/
