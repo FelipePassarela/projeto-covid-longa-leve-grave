@@ -38,18 +38,14 @@ def _calculate_shap_values(
         raw_shap_values = explainer.shap_values(X_test_selected)
     elif isinstance(model, RandomForestClassifier):
         explainer = shap.TreeExplainer(model)
-        raw_shap_values = explainer.shap_values(X_test_selected)
-        raw_shap_values = np.array(raw_shap_values)[:, :, 1]
+        raw_shap_values = explainer.shap_values(X_test_selected)[:, :, 1]
     else:
         background = shap.sample(X_train_selected, 100)
         explainer = shap.KernelExplainer(model.predict, background)
         raw_shap_values = explainer.shap_values(X_test_selected)
     
     exp_val = explainer.expected_value
-    if isinstance(exp_val, float):
-        base_value = np.full(X_test_selected.shape[0], exp_val)
-    else:
-        base_value = exp_val
+    base_value = np.full(X_test_selected.shape[0], exp_val) if isinstance(exp_val, float) else exp_val
         
     shap_values = shap.Explanation(
         values=raw_shap_values,
@@ -87,7 +83,7 @@ def _plot_shap(
     features_names = X_columns[feat_indices]
     shap_values = _calculate_shap_values(model, X_train_selected, X_test_selected, features_names)
 
-    shap.summary_plot(shap_values, X_test_selected, feature_names=features_names, show=False)
+    shap.summary_plot(shap_values, X_test_selected, show=False)
     plt.title(f"SHAP values of the {get_model_name(model, short=True)} model")
     plt.tight_layout()
 
