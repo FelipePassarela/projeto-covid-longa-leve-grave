@@ -116,6 +116,7 @@ def evaluate_cv(
         model: BaseEstimator, 
         selector: RFE,
         features_array: Sequence[int], 
+        results_path: PathLike,
         scoring: str = "roc_auc",
         cv: int = 5,
         fitted_on_whole_dataset: bool = False
@@ -143,8 +144,9 @@ def evaluate_cv(
         X_train, X_test = X[train_idx], X[val_idx]
         y_train, y_test = y[train_idx], y[val_idx]
 
-        selector_fold = clone(selector)
+        selector_fold = selector
         if not fitted_on_whole_dataset:  # To avoid data leakage
+            selector_fold = clone(selector)
             selector_fold.fit(X_train, y_train)
         
         for n_feats in features_array:
@@ -162,8 +164,14 @@ def evaluate_cv(
             
             results_dict[n_feats].append(score)
     
+    results_path = Path(results_path) / f"{get_model_name(model, short=True)}_cv.csv"
+    results_path.parent.mkdir(parents=True, exist_ok=True)
+    
     results = [{'n_features': n_feats, 'scores': scores} for n_feats, scores in results_dict.items()]
-    return pd.DataFrame(results)
+    results = pd.DataFrame(results)
+    results.to_csv(results_path, index=False)
+
+    return results
 
 
 def save_model_results(results: pd.DataFrame, path: PathLike, tuned: bool = False) -> None:

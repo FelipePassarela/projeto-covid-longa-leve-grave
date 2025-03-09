@@ -103,6 +103,7 @@ def main_pipeline(
             model=model_cv,
             selector=selector,
             features_array=features_array,
+            results_path=results_path,
             scoring=eval_metric,
             cv=5,
             fitted_on_whole_dataset=fit_selector_on_whole_dataset
