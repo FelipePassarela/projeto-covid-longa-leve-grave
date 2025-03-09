@@ -165,7 +165,7 @@ def plot_boxplot(
     ax.set_title(f"Distribution of {score_title} for {model_name} ({cv}-fold CV)", fontsize=14)
     plt.tight_layout()
 
-    fig_path = Path(plots_path) / f"boxplot_{model_name}.png"
+    fig_path = Path(plots_path) / f"boxplot.png"
     fig_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(fig_path)
 
