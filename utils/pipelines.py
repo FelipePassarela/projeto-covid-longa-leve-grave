@@ -22,11 +22,11 @@ def plots_pipeline(
         models_path: PathLike,
         plots_path: PathLike,
         shap_path: PathLike,
-        model_cv: BaseEstimator,
         results_standard: EvalResultsDict,
         results_tuned: EvalResultsDict,
-        results_cv: pd.DataFrame,
         eval_metric: str,
+        model_cv: BaseEstimator = None,
+        results_cv: pd.DataFrame = None,
         specific_model_for_shaps: BaseEstimator = None,
     ) -> None:
     """
@@ -41,11 +41,13 @@ def plots_pipeline(
     :param models_path: The path to the models.
     :param plots_path: The path to save the plots.
     :param shap_path: The path to save the shap plots.
-    :param model_cv: The model used for cross-validation.
     :param results_standard: The results for the standard models.
     :param results_tuned: The results for the tuned models.
-    :param results_cv: The results for the cross-validation.
     :param eval_metric: The evaluation metric.
+    :param model_cv: The model used for cross-validation. If None, 
+        the cross-validation plots will not be generated.
+    :param results_cv: The results for the cross-validation. If None, 
+        the cross-validation plots will not be generated.
     :param specific_model_for_shaps: A specific model to generate the shap plots. Default is None.
     """
     plot_evals(plots_path, results_standard, results_tuned, eval_metric)
@@ -77,6 +79,7 @@ def plots_pipeline(
             models_path, specific_model_path,
             specific_model=specific_model_for_shaps
         )
-    
-    cv_model_name = get_model_name(model_cv, short=True).lower()
-    plot_boxplot(results_cv, cv_model_name, plots_path, eval_metric)
+
+    if model_cv and results_cv is not None:
+        cv_model_name = get_model_name(model_cv, short=True).lower()
+        plot_boxplot(results_cv, cv_model_name, plots_path, eval_metric)

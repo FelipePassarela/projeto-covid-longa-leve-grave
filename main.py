@@ -97,9 +97,8 @@ def main() -> None:
         X, X_train, X_test, y_test,
         selector, features_array,
         models_path, plots_path, shap_path,
-        model_cv,
-        results_standard, results_tuned, results_cv,
-        eval_metric,
+        results_standard, results_tuned, eval_metric,
+        model_cv=model_cv, results_cv=results_cv,
         specific_model_for_shaps=SVC()
     )
 
