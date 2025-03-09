@@ -1,30 +1,31 @@
+from os import PathLike
 from typing import List, Tuple
 
 import numpy as np
 import pandas as pd
 from imblearn.over_sampling import ADASYN
-from sklearn.discriminant_analysis import StandardScaler
 from sklearn.feature_selection import RFE, SelectorMixin
 from sklearn.impute import KNNImputer, SimpleImputer
+from sklearn.preprocessing import StandardScaler
 
 from utils.models.model_dumping import load_rfe_selector, save_model
 
 
-def load_data(file_path: str, target: str, threshold: float = 10.0) -> pd.DataFrame:
+def load_data(file_path: PathLike, target: str, missing_threshold: float = 10.0) -> pd.DataFrame:
     """
     Load data from a CSV file and preprocess it by dropping columns with more 
     than a specified percentage of missing values.
 
     :param file_path: Path to the CSV file.
     :param target: The target variable for the dataset.
-    :param threshold: Maximum percentage of missing values allowed for a column to be kept.
+    :param missing_threshold: Maximum percentage of missing values allowed for a column to be kept.
 
     :return: The dataframe with the data.
     """
     df = pd.read_csv(file_path)
     df = df.dropna(subset=[target])
     missing_percentage = df.isnull().mean() * 100
-    df = df.drop(columns=missing_percentage[missing_percentage > threshold].index)
+    df = df.drop(columns=missing_percentage[missing_percentage > missing_threshold].index)
     df = df.drop(columns=["id"])
     return df
 
@@ -57,7 +58,7 @@ def preprocess_data(
     X_test = scaler.transform(X_test)
 
     if oversample:
-        X_train, y_train = oversample(X_train, y_train)
+        X_train, y_train = _oversample(X_train, y_train)
 
     return X_train, X_test, y_train, y_test
 
@@ -124,7 +125,7 @@ def fit_selector(
         selector.fit(X_train, y_train)
 
 
-def oversample(
+def _oversample(
         X_train: pd.DataFrame | np.ndarray, 
         y_train: pd.DataFrame | np.ndarray
     ) -> Tuple[np.ndarray, np.ndarray]:
