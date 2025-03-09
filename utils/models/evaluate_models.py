@@ -5,7 +5,7 @@ from typing import Dict, Sequence, Tuple
 
 import numpy as np
 import pandas as pd
-from sklearn.base import BaseEstimator
+from sklearn.base import BaseEstimator, clone
 from sklearn.feature_selection import RFE
 from sklearn.metrics import (accuracy_score, confusion_matrix, f1_score,
                              roc_auc_score)
@@ -117,7 +117,8 @@ def evaluate_cv(
         selector: RFE,
         features_array: Sequence[int], 
         scoring: str = "roc_auc",
-        cv: int = 5
+        cv: int = 5,
+        fitted_on_whole_dataset: bool = False
     ) -> pd.DataFrame:
     """
     Evaluate the model with cross-validation.
@@ -129,35 +130,39 @@ def evaluate_cv(
     :param features_array: The number of features to evaluate.
     :param scoring: The scoring metric.
     :param cv: The number of cross-validation folds.
+    :param fitted_on_whole_dataset: Whether the selector was fitted on the whole dataset.
         
     :return: A DataFrame containing the cross-validation results.
     """
-    results = []
-    for n_feats in features_array:
-        scores = []
-        kf = KFold(n_splits=cv, shuffle=True, random_state=42)
+    results_dict = {n_feats: [] for n_feats in features_array}
+    
+    kf = KFold(n_splits=cv, shuffle=True, random_state=42)
+    for fold, (train_idx, val_idx) in enumerate(kf.split(X)):
+        print(f"\rFold {fold + 1}/{cv}", end="")
+        
+        X_train, X_test = X[train_idx], X[val_idx]
+        y_train, y_test = y[train_idx], y[val_idx]
 
-        for fold, (train_idx, val_idx) in enumerate(kf.split(X)):
-            print(f"Fold {fold + 1}/{cv}")
-
-            X_train, X_test = X[train_idx], X[val_idx]
-            y_train, y_test = y[train_idx], y[val_idx]
-
-            X_train_selected, _ = extract_subset(selector, X_train, n_feats)
-            X_test_selected, _ = extract_subset(selector, X_test, n_feats)
-
-            model = model.__class__(**model.get_params())  # Reset model to initial state
-
-            model.fit(X_train_selected, y_train)
+        selector_fold = clone(selector)
+        if not fitted_on_whole_dataset:  # To avoid data leakage
+            selector_fold.fit(X_train, y_train)
+        
+        for n_feats in features_array:
+            X_train_selected, _ = extract_subset(selector_fold, X_train, n_feats)
+            X_test_selected, _ = extract_subset(selector_fold, X_test, n_feats)
+            
+            model_fold = clone(model)
+            model_fold.fit(X_train_selected, y_train)
+            
             scoring_fn = get_scoring_fn(scoring)
             if scoring == "roc_auc":
-                score = scoring_fn(y_test, model.predict_proba(X_test_selected)[:, 1])
+                score = scoring_fn(y_test, model_fold.predict_proba(X_test_selected)[:, 1])
             else:
-                score = scoring_fn(y_test, model.predict(X_test_selected))
-            scores.append(score)
-
-        results.append({'n_features': n_feats, 'scores': scores})
-
+                score = scoring_fn(y_test, model_fold.predict(X_test_selected))
+            
+            results_dict[n_feats].append(score)
+    
+    results = [{'n_features': n_feats, 'scores': scores} for n_feats, scores in results_dict.items()]
     return pd.DataFrame(results)
 
 
