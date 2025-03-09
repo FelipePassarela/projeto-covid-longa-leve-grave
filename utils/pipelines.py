@@ -1,5 +1,7 @@
 from os import PathLike
+import os
 from pathlib import Path
+import shutil
 
 import numpy as np
 import pandas as pd
@@ -10,9 +12,10 @@ from sklearn.svm import SVC
 
 from utils.models.evaluate_models import (EvalResultsDict, evaluate_cv,
                                           evaluate_models)
+from utils.models.model_dumping import load_rfe_selector, save_model
 from utils.models.models_and_params import get_model_and_params, get_model_name
 from utils.plots.results import plot_boxplot, plot_evals
-from utils.plots.shap import plot_shaps, plot_shaps_feature_clustering
+from utils.plots.shap import plot_shaps, plot_shaps_bar_plot
 from utils.preprocessing import fit_selector, load_data, preprocess_data
 
 
@@ -24,7 +27,8 @@ def main_pipeline(
         fit_selector_on_whole_dataset: bool = False,
         missing_threshold: float = 10.0,
         run_cv: bool = True,
-        specific_model_for_shaps: BaseEstimator = None
+        specific_model_for_shaps: BaseEstimator = None,
+        eval_metric: str = "roc_auc"
     ) -> None:
     """
     Executes the main pipeline of the project.
@@ -35,10 +39,9 @@ def main_pipeline(
 
     The workflow includes:
     1. Loading and preprocessing the data
-    2. Splitting into train/test sets
-    3. Feature selection using RFE
-    4. Training and evaluating multiple models
-    5. Generating performance plots and analysis visualizations
+    2. Feature selection using RFE
+    3. Training and evaluating multiple models
+    4. Generating performance plots and analysis visualizations
 
     :param genomic_data_path: Path to the genomic data file.
     :param target: The target variable for the dataset.
@@ -50,6 +53,12 @@ def main_pipeline(
     :param specific_model_for_shaps: A specific model to generate SHAP plots for. If None,
         only the plots for the best model will be generated. Default is None.
     """
+    models_path = Path("output/models/")
+    results_path = Path("output/results/")
+    plots_path = Path("output/plots/")
+    shap_path = plots_path / "shap"
+    selectors_path = models_path / "selectors"
+
     df = load_data(genomic_data_path, target, missing_threshold=missing_threshold)
     X = df.drop(columns=[target])
     y = df[target]
@@ -58,11 +67,14 @@ def main_pipeline(
     X_train, X_test, y_train, y_test = preprocess_data(X_train, X_test, y_train, y_test, oversample=oversample)
 
     selector_estim = SVC(kernel="linear", random_state=42)
-    selector = RFE(selector_estim, n_features_to_select=1)
-    fit_selector(
-        X_train, X_test, y_train, y_test, 
-        selector, on_whole_dataset=fit_selector_on_whole_dataset
-    )
+    selector = load_rfe_selector(1, selectors_path)
+    if selector is None:
+        selector = RFE(selector_estim, n_features_to_select=1, step=1)
+        fit_selector(
+            X_train, X_test, y_train, y_test, 
+            selector, on_whole_dataset=fit_selector_on_whole_dataset
+        )
+    save_model(selector, 1, selectors_path)
 
     models_and_params = [
         get_model_and_params("logistic_regression"),
@@ -71,12 +83,6 @@ def main_pipeline(
         get_model_and_params("random_forest"),
         get_model_and_params("xgboost")
     ]
-
-    models_path = Path("output/models/")
-    results_path = Path("output/results/")
-    plots_path = Path("output/plots/")
-    shap_path = plots_path / "shap"
-    eval_metric = "roc_auc"
 
     results_standard = evaluate_models(
         X_train, X_test, y_train, y_test, X.columns,
@@ -98,7 +104,8 @@ def main_pipeline(
             selector=selector,
             features_array=features_array,
             scoring=eval_metric,
-            cv=5
+            cv=5,
+            fitted_on_whole_dataset=fit_selector_on_whole_dataset
         )
     else:
         model_cv = None
@@ -154,36 +161,37 @@ def _plots_pipeline(
         only the plots for the best model will be generated. Default is None.
     """
     plot_evals(plots_path, results_standard, results_tuned, eval_metric)
-    
+        
+    if model_cv and results_cv is not None:
+        cv_model_name = get_model_name(model_cv, short=True)
+        plot_boxplot(results_cv, cv_model_name, plots_path, eval_metric)
+
+    bar_plot_path = shap_path / "bar_plot"
+
     plot_shaps(
         X_train, X_test, X.columns,
         selector, features_array,
         models_path, shap_path,
-        comparison_metric=eval_metric
     )    
-    plot_shaps_feature_clustering(
+    plot_shaps_bar_plot(
         X_train, X_test, y_test, X.columns, 
         selector, features_array,
-        models_path, shap_path
+        models_path, bar_plot_path
     )
-
-    if model_cv and results_cv is not None:
-        cv_model_name = get_model_name(model_cv, short=True).lower()
-        plot_boxplot(results_cv, cv_model_name, plots_path, eval_metric)
 
     if specific_model_for_shaps:
         specific_model_path = shap_path / get_model_name(specific_model_for_shaps, short=True).lower()
+        specific_model_path_bar_plot = bar_plot_path / get_model_name(specific_model_for_shaps, short=True).lower()
         plot_shaps(
             X_train, X_test, X.columns,
             selector, features_array,
             models_path, specific_model_path,
             specific_model=specific_model_for_shaps,
-            comparison_metric=eval_metric
         )
-        plot_shaps_feature_clustering(
+        plot_shaps_bar_plot(
             X_train, X_test, y_test, X.columns,
             selector, features_array,
-            models_path, specific_model_path,
+            models_path, specific_model_path_bar_plot,
             specific_model=specific_model_for_shaps
         )
 
@@ -199,7 +207,7 @@ def move_pipeline_outputs(target_output_path: PathLike) -> None:
 
     default_output = Path("output")
     for file in default_output.iterdir():
-        if file.is_file():
-            file.rename(target_output / file.name)
+        if file.is_file:
+            shutil.move(file, target_output)
     
     print(f"Moved files to {target_output}")
