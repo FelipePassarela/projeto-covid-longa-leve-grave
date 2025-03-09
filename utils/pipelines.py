@@ -197,18 +197,18 @@ def _plots_pipeline(
         )
 
 
-def move_pipeline_outputs(target_output_path: PathLike) -> None:
+def move_pipeline_outputs(target_path: PathLike) -> None:
     """
     Move the pipeline outputs to a target directory.
 
-    :param target_output_path: The path to the target directory.
+    :param target_path: The target directory to move the outputs.
     """
-    target_output = Path(target_output_path)
-    target_output.mkdir(parents=True, exist_ok=True)
+    target_path = Path(target_path)
+    target_path.mkdir(parents=True, exist_ok=True)
 
     default_output = Path("output")
     for file in default_output.iterdir():
-        if file.is_file:
-            shutil.move(file, target_output)
+        if file.is_file():
+            shutil.move(file, target_path)
     
-    print(f"Moved files to {target_output}")
+    print(f"Moved files to {target_path}")
