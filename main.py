@@ -48,11 +48,12 @@ def main():
             genomic_data_path,
             target,
             FEATURES_ARRAY,
-            oversample=True,
-            fit_selector_on_whole_dataset=False,
+            oversample=False,
+            fit_selector_on_whole_dataset=True,
             missing_threshold=10.0,
             run_cv=True,
             specific_model_for_shaps=SVC(),
+            eval_metric="roc_auc"
         )
 
         target_output = Path(f"results/{category}/{subcategory}")
