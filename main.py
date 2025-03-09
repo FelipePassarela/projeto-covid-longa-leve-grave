@@ -53,7 +53,9 @@ def main():
             missing_threshold=10.0,
             run_cv=True,
             specific_model_for_shaps=SVC(),
-            eval_metric="roc_auc"
+            eval_metric="roc_auc",
+            plot_shap=True,
+            plot_bar=False
         )
 
         target_output = Path(f"results/{category}/{subcategory}")

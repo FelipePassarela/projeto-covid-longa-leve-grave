@@ -28,7 +28,9 @@ def main_pipeline(
         missing_threshold: float = 10.0,
         run_cv: bool = True,
         specific_model_for_shaps: BaseEstimator = None,
-        eval_metric: str = "roc_auc"
+        eval_metric: str = "roc_auc",
+        plot_shap: bool = True,
+        plot_bar: bool = False
     ) -> None:
     """
     Executes the main pipeline of the project.
@@ -52,6 +54,9 @@ def main_pipeline(
     :param run_cv: Whether to run cross-validation. Default is True.
     :param specific_model_for_shaps: A specific model to generate SHAP plots for. If None,
         only the plots for the best model will be generated. Default is None.
+    :param eval_metric: The evaluation metric to use. Default is "roc_auc".
+    :param plot_shap: Whether to plot the SHAP values. Default is True.
+    :param plot_bar: Whether to plot the SHAP bar plot. Default is False.
     """
     models_path = Path("output/models/")
     results_path = Path("output/results/")
@@ -96,7 +101,7 @@ def main_pipeline(
     )
 
     if run_cv:
-        model_cv = SVC(random_state=42, probability=True)
+        model_cv = SVC(kernel="linear", random_state=42, probability=True)
         results_cv = evaluate_cv(
             np.concatenate([X_train, X_test]),
             np.concatenate([y_train, y_test]),
@@ -118,7 +123,8 @@ def main_pipeline(
         models_path, plots_path, shap_path,
         results_standard, results_tuned, eval_metric,
         model_cv=model_cv, results_cv=results_cv,
-        specific_model_for_shaps=specific_model_for_shaps
+        specific_model_for_shaps=specific_model_for_shaps,
+        plot_shap=plot_shap, plot_bar=plot_bar
     )
 
 
@@ -138,6 +144,8 @@ def _plots_pipeline(
         model_cv: BaseEstimator = None,
         results_cv: pd.DataFrame = None,
         specific_model_for_shaps: BaseEstimator = None,
+        plot_shap: bool = True,
+        plot_bar: bool = False
     ) -> None:
     """
     Generate the plots for the models evaluation.
@@ -160,6 +168,8 @@ def _plots_pipeline(
         the cross-validation plots will not be generated.
     :param specific_model_for_shaps: A specific model to generate the shap plots. If None,
         only the plots for the best model will be generated. Default is None.
+    :param plot_shap: Whether to plot the SHAP values. Default is True.
+    :param plot_bar: Whether to plot the SHAP bar plot. Default is False.
     """
     plot_evals(plots_path, results_standard, results_tuned, eval_metric)
         
@@ -169,32 +179,37 @@ def _plots_pipeline(
 
     bar_plot_path = shap_path / "bar_plot"
 
-    plot_shaps(
-        X_train, X_test, X.columns,
-        selector, features_array,
-        models_path, shap_path,
-    )    
-    plot_shaps_bar_plot(
-        X_train, X_test, y_test, X.columns, 
-        selector, features_array,
-        models_path, bar_plot_path
-    )
+    if plot_shap:
+        plot_shaps(
+            X_train, X_test, X.columns,
+            selector, features_array,
+            models_path, shap_path,
+        )
+    if plot_bar:
+        plot_shaps_bar_plot(
+            X_train, X_test, y_test, X.columns, 
+            selector, features_array,
+            models_path, bar_plot_path
+        )
 
     if specific_model_for_shaps:
         specific_model_path = shap_path / get_model_name(specific_model_for_shaps, short=True).lower()
         specific_model_path_bar_plot = bar_plot_path / get_model_name(specific_model_for_shaps, short=True).lower()
-        plot_shaps(
-            X_train, X_test, X.columns,
-            selector, features_array,
-            models_path, specific_model_path,
-            specific_model=specific_model_for_shaps,
-        )
-        plot_shaps_bar_plot(
-            X_train, X_test, y_test, X.columns,
-            selector, features_array,
-            models_path, specific_model_path_bar_plot,
-            specific_model=specific_model_for_shaps
-        )
+
+        if plot_shap:
+            plot_shaps(
+                X_train, X_test, X.columns,
+                selector, features_array,
+                models_path, specific_model_path,
+                specific_model=specific_model_for_shaps,
+            )
+        if plot_bar:
+            plot_shaps_bar_plot(
+                X_train, X_test, y_test, X.columns,
+                selector, features_array,
+                models_path, specific_model_path_bar_plot,
+                specific_model=specific_model_for_shaps
+            )
 
 
 def move_pipeline_outputs(target_path: PathLike) -> None:
@@ -207,8 +222,8 @@ def move_pipeline_outputs(target_path: PathLike) -> None:
     target_path.mkdir(parents=True, exist_ok=True)
 
     default_output = Path("output")
-    for file in default_output.iterdir():
-        if file.is_file():
-            shutil.move(file, target_path)
+    for file in os.listdir(default_output):
+        file = default_output / file
+        shutil.move(file, target_path)
     
     print(f"Moved files to {target_path}")
