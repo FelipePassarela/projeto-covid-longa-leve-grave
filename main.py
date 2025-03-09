@@ -21,9 +21,9 @@ from sklearn.feature_selection import RFE
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 
-from utils.evaluate_models import evaluate_cv, evaluate_models
-from utils.models_and_params import get_model_and_params, get_model_name
-from utils.plot_results import plot_boxplot, plot_evals, plot_shap, plot_shap_svm
+from utils.pipelines import plots_pipeline
+from utils.models.evaluate_models import evaluate_cv, evaluate_models
+from utils.models.models_and_params import get_model_and_params, get_model_name
 from utils.preprocessing import fit_selector, load_data, preprocess_data
 
 FILE_NAME = "data/28_01/longa/nao_vacinados_uma_dose/matriz_genotipos_no_vac_COVID_LONGA_UMA__DOSE_filtrado.csv"
@@ -68,6 +68,7 @@ def main() -> None:
     models_path = Path("output/models/")
     results_path = Path("output/results/")
     plots_path = Path("output/plots/")
+    shap_path = plots_path / "shap"
     eval_metric = "roc_auc"
 
     results_standard = evaluate_models(
@@ -91,18 +92,24 @@ def main() -> None:
         scoring=eval_metric,
         cv=5
     )
-
-    plot_evals(plots_path, results_standard, results_tuned, eval_metric)
-    plot_shap(X_train, X_test, X.columns, selector, features_array, models_path, eval_metric)
-    plot_boxplot(results_cv, get_model_name(model_cv, short=True), plots_path, eval_metric)
-
+    
+    plots_pipeline(
+        X, X_train, X_test, y_test,
+        selector, features_array,
+        models_path, plots_path, shap_path,
+        model_cv,
+        results_standard, results_tuned, results_cv,
+        eval_metric,
+        specific_model_for_shaps=SVC()
+    )
 
 if __name__ == "__main__":
     import matplotlib
 
     matplotlib.use("Agg")
 
-    def process_dataset(category, subcategory, dataset_name, target):
+    def process_dataset(category,
+        subcategory, dataset_name, target):
         global FILE_NAME, TARGET
         FILE_NAME = f"data/{category}/{subcategory}/{dataset_name}"
         TARGET = target

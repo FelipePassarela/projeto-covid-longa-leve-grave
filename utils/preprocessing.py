@@ -7,7 +7,7 @@ from sklearn.discriminant_analysis import StandardScaler
 from sklearn.feature_selection import RFE, SelectorMixin
 from sklearn.impute import KNNImputer, SimpleImputer
 
-from utils.model_dumping import load_rfe_selector, save_model
+from utils.models.model_dumping import load_rfe_selector, save_model
 
 
 def load_data(file_path: str, target: str, threshold: float = 10.0) -> pd.DataFrame:
