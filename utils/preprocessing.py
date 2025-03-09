@@ -137,6 +137,6 @@ def _oversample(
     
     :return: The oversampled training data and labels.
     """
-    adasyn = ADASYN(sampling_strategy='minority', random_state=42)
+    adasyn = ADASYN(sampling_strategy='auto', random_state=42)
     X_train_resamp, y_train_resamp = adasyn.fit_resample(X_train, y_train)
     return X_train_resamp, y_train_resamp
