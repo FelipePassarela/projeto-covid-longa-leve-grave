@@ -141,7 +141,7 @@ def evaluate_cv(
     
     kf = KFold(n_splits=cv, shuffle=True, random_state=42)
     for fold, (train_idx, val_idx) in enumerate(kf.split(X)):
-        print(f"\rFold {fold + 1}/{cv}", end="")
+        print(f"\rRunning cross-validation [Fold {fold + 1}/{cv}]", end="")
         
         X_train, X_test = X[train_idx], X[val_idx]
         y_train, y_test = y[train_idx], y[val_idx]
@@ -165,6 +165,7 @@ def evaluate_cv(
                 score = scoring_fn(y_test, model_fold.predict(X_test_selected))
             
             results_dict[n_feats].append(score)
+    print()
     
     results_path = Path(results_path) / f"{get_model_name(model, short=True)}_cv.csv"
     results_path.parent.mkdir(parents=True, exist_ok=True)
