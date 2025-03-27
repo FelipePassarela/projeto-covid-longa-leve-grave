@@ -1,5 +1,6 @@
 from typing import Any, Dict, List, Tuple
 
+from scipy.stats import randint, uniform
 from sklearn.base import BaseEstimator
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import RFE
@@ -13,7 +14,7 @@ HyperParamGrid = Dict[str, List[Any]]  # Type alias for hyperparameters grid.
 
 def get_model_and_params(model_name: str) -> Tuple[BaseEstimator, HyperParamGrid]:
     """
-    Return the model and the hyperparameters to be tested in the GridSearchCV based on the model name.
+    Return the model and the hyperparameters to be tested in the RandomizedSearchCV based on the model name.
 
     :param model_name: The name of the model.
     
@@ -24,23 +25,23 @@ def get_model_and_params(model_name: str) -> Tuple[BaseEstimator, HyperParamGrid
         "svm": (
             SVC(random_state=42, probability=True), 
             { 
-                "C": [0.1, 1, 10],
+                "C": uniform(0.1, 10),
                 "kernel": ["linear", "poly", "rbf", "sigmoid"],
-                "degree": [2, 3, 4],
+                "degree": randint(2, 5),
                 "gamma": ["scale", "auto"]
             }
         ),
         "logistic_regression": (
             LogisticRegression(random_state=42),
             {
-                "C": [0.1, 1, 10],
+                "C": uniform(0.1, 10),
                 "solver": ["newton-cg", "lbfgs", "liblinear", "sag", "saga"]
             }
         ),
         "knn": (
             KNeighborsClassifier(),
             {
-                "n_neighbors": [3, 5, 7, 9],
+                "n_neighbors": randint(3, 10),
                 "weights": ["uniform", "distance"],
                 "algorithm": ["auto", "ball_tree", "kd_tree", "brute"]
             }
@@ -48,7 +49,7 @@ def get_model_and_params(model_name: str) -> Tuple[BaseEstimator, HyperParamGrid
         "random_forest": (
             RandomForestClassifier(random_state=42),
             {
-                "n_estimators": [100, 200, 300],
+                "n_estimators": randint(100, 301),
                 "criterion": ["gini", "entropy"],
                 "max_depth": [None, 10, 20, 30],
             }
@@ -56,16 +57,15 @@ def get_model_and_params(model_name: str) -> Tuple[BaseEstimator, HyperParamGrid
         "xgboost": (
             XGBClassifier(random_state=42),
             {
-                "n_estimators": [100, 200, 300],
-                "max_depth": [3, 4, 5],
-                "learning_rate": [0.1, 0.01, 0.001],
-                "subsample": [0.5, 0.7, 1],
-                "colsample_bytree": [0.5, 0.7, 1],
+                "n_estimators": randint(100, 301),
+                "max_depth": randint(3, 6),
+                "learning_rate": uniform(0.001, 0.1),
+                "subsample": uniform(0.5, 0.5),
+                "colsample_bytree": uniform(0.5, 0.5),
             }
         )
     }
 
-    
     if model_name in models_params:
         return models_params[model_name]
     else:

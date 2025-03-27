@@ -9,8 +9,7 @@ from sklearn.base import BaseEstimator, clone
 from sklearn.feature_selection import RFE
 from sklearn.metrics import (accuracy_score, confusion_matrix, f1_score,
                              roc_auc_score)
-from sklearn.model_selection import GridSearchCV, KFold
-from sklearn.svm import SVC
+from sklearn.model_selection import KFold, RandomizedSearchCV
 
 from utils.models.model_dumping import save_model
 from utils.models.models_and_params import HyperParamGrid, get_model_name
@@ -65,9 +64,12 @@ def evaluate_models(
             X_test_selected, feat_indices = extract_subset(selector, X_test, n_feat)
 
             if tune:
-                grid_search = GridSearchCV(model, params, cv=5, scoring="roc_auc", n_jobs=-1)
-                grid_search.fit(X_train_selected, y_train)
-                model = grid_search.best_estimator_
+                random_search = RandomizedSearchCV(
+                    model, params, cv=5, scoring="roc_auc", 
+                    n_jobs=-1, n_iter=20, random_state=42
+                )
+                random_search.fit(X_train_selected, y_train)
+                model = random_search.best_estimator_
             else:
                 model.fit(X_train_selected, y_train)
 
