@@ -3,22 +3,22 @@ import os
 import pandas as pd
 
 
-def merge(info_path: str, genom_path: str, merged_path: str, column_name: str):
+def merge(spreadsheet_path: str, genom_path: str, merged_path: str, target_column: str):
     """
     Merge the genomic data with the patient information data.
 
-    :param info_path: The path to the patient information data.
+    :param spreadsheet_path: The path to the patient information data.
     :param genom_path: The path to the genomic data.
     :param merged_path: The path to save the merged data.
-    :param column_name: The name of the column to merge on.
+    :param target_column: The name of the target column to merge on.
     """
     try:
-        if not os.path.exists(info_path):
-            raise FileNotFoundError(f"File {info_path} not found.")
+        if not os.path.exists(spreadsheet_path):
+            raise FileNotFoundError(f"File {spreadsheet_path} not found.")
         if not os.path.exists(genom_path):
             raise FileNotFoundError(f"File {genom_path} not found.")
 
-        df_info = pd.read_csv(info_path, usecols=['id', column_name])
+        df_info = pd.read_csv(spreadsheet_path, usecols=['id', target_column])
         df_genom = pd.read_csv(genom_path)
 
         # Ensure the id columns are equally formatted
@@ -26,9 +26,10 @@ def merge(info_path: str, genom_path: str, merged_path: str, column_name: str):
         df_genom['id'] = df_genom['id'].astype(str).str.strip()
 
         df_merged = pd.merge(df_genom, df_info, on='id', how='left')
+        df_merged = df_merged.dropna(subset=[target_column])
 
-        missing_ids = df_merged[df_merged[column_name].isnull()]['id']
-        print("Missing IDs:", missing_ids)
+        missing_ids = set(df_info['id']) - set(df_merged['id'])
+        print("Missing IDs in genomic dataset:", missing_ids)
 
         df_merged.to_csv(merged_path, index=False)
         print("Data merged and saved successfully.")
@@ -50,6 +51,6 @@ if __name__ == "__main__":
         ("data/sistema_nervoso/nao_vacinados/planilha.csv", "data/genom_processed.csv", "data/sistema_nervoso/nao_vacinados/merged.csv", "Sist_Nerv_Per_"),
     ]
     
-    for info_path, genom_path, save_path, column_name in datasets:
-        print(f"Merging {info_path} with {genom_path} on column {column_name}")
-        merge(info_path, genom_path, save_path, column_name)
+    for spreadsheet_path, genom_path, save_path, target_column in datasets:
+        print(f"Merging {spreadsheet_path} with {genom_path} on column {target_column}")
+        merge(spreadsheet_path, genom_path, save_path, target_column)
