@@ -140,8 +140,8 @@ def plot_boxplot(
         results_df: pd.DataFrame, 
         model_name: str, 
         plots_path: PathLike, 
-        scoring="roc_auc",
-    ) -> plt.Figure:
+        scoring: str = "roc_auc"
+    ) -> None:
     """
     Plot the boxplot of the results for different number of features.
 
@@ -149,10 +149,7 @@ def plot_boxplot(
     :param model_name: Name of the model.
     :param plots_path: Path to the directory where the plots will be saved.
     :param scoring: Metric to be plotted. Defaults to "roc_auc".
-
-    :return: The figure containing the boxplot.
     """
-
     scores_per_feature = {n: scores for n, scores in zip(results_df["n_features"], results_df["scores"])}
     score_title = SCORE_TITLES.get(scoring, scoring)
 
@@ -168,5 +165,5 @@ def plot_boxplot(
     fig_path = Path(plots_path) / f"boxplot.png"
     fig_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(fig_path)
-
-    return fig
+    
+    plt.close(fig)
