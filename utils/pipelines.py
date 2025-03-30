@@ -152,6 +152,10 @@ def data_preparing_pipeline(
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
     X_train, X_test, y_train, y_test = preprocess_data(X_train, X_test, y_train, y_test, oversample=oversample)
 
+    X_columns = X.columns
+    X = np.vstack([X_train, X_test])
+    X = pd.DataFrame(X, columns=X_columns)
+
     return X, X_train, X_test, y_train, y_test
 
 
