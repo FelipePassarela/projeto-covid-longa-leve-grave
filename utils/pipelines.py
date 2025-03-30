@@ -6,9 +6,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import RFE, SelectorMixin
 from sklearn.model_selection import train_test_split
-from sklearn.svm import SVC
 
 from utils.models.evaluate_models import (EvalResultsDict, evaluate_cv,
                                           evaluate_models)
@@ -24,6 +24,7 @@ def main_pipeline(
         target: str,
         features_array: list[int],
         oversample: bool = False,
+        selector_estim: BaseEstimator = RandomForestClassifier(random_state=42, n_jobs=-1),
         fit_selector_on_whole_dataset: bool = False,
         missing_threshold: float = 10.0,
         run_cv: bool = True,
@@ -49,6 +50,7 @@ def main_pipeline(
     :param target: The target variable for the dataset.
     :param features_array: List of number of features to be selected.
     :param oversample: Whether to oversample the data. Default is False.
+    :param selector_estim: The estimator to be used for feature selection. Default is RandomForestClassifier.
     :param fit_selector_on_whole_dataset: Whether to fit the selector on the whole dataset. Default is False.
     :param missing_threshold: Maximum percentage of missing values allowed for a column to be kept. Default is 10.0.
     :param run_cv: Whether to run cross-validation. Default is True.
@@ -71,10 +73,9 @@ def main_pipeline(
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
     X_train, X_test, y_train, y_test = preprocess_data(X_train, X_test, y_train, y_test, oversample=oversample)
 
-    selector_estim = SVC(kernel="linear", random_state=42)
     selector = load_rfe_selector(1, selectors_path)
     if selector is None:
-        selector = RFE(selector_estim, n_features_to_select=1, step=1)
+        selector = RFE(selector_estim, n_features_to_select=1, step=1, verbose=2)
         fit_selector(
             X_train, X_test, y_train, y_test, 
             selector, on_whole_dataset=fit_selector_on_whole_dataset
@@ -101,7 +102,7 @@ def main_pipeline(
     )
 
     if run_cv:
-        model_cv = SVC(kernel="linear", random_state=42, probability=True)
+        model_cv = selector_estim
         results_cv = evaluate_cv(
             np.concatenate([X_train, X_test]),
             np.concatenate([y_train, y_test]),
@@ -173,7 +174,7 @@ def _plots_pipeline(
     """
     plot_evals(plots_path, results_standard, results_tuned, eval_metric)
         
-    if model_cv and results_cv is not None:
+    if model_cv is not None and results_cv is not None:
         cv_model_name = get_model_name(model_cv, short=True)
         plot_boxplot(results_cv, cv_model_name, plots_path, eval_metric)
 
@@ -192,7 +193,7 @@ def _plots_pipeline(
             models_path, bar_plot_path
         )
 
-    if specific_model_for_shaps:
+    if specific_model_for_shaps is not None:
         specific_model_path = shap_path / get_model_name(specific_model_for_shaps, short=True).lower()
         specific_model_path_bar_plot = bar_plot_path / get_model_name(specific_model_for_shaps, short=True).lower()
 

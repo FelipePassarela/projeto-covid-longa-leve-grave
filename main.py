@@ -17,7 +17,7 @@ __email__ = "felipepassarela11@gmail.com"
 from pathlib import Path
 
 import matplotlib
-from sklearn.svm import SVC
+from xgboost import XGBClassifier
 
 from utils.pipelines import main_pipeline, move_pipeline_outputs
 
@@ -26,6 +26,9 @@ def main():
     matplotlib.use("Agg")
 
     datasets = [
+        ("27-03-2025", "CL-NAVC", "merged.csv", "RISK"),
+        ("27-03-2025", "SCL-NVC", "merged.csv", "RISK"),
+        
         ("grave", "geral", "merged.csv", "risk"),
         ("grave", "nao_vacinados", "merged.csv", "risk"),
 
@@ -49,13 +52,14 @@ def main():
             target,
             FEATURES_ARRAY,
             oversample=False,
+            selector_estim=XGBClassifier(random_state=42),
             fit_selector_on_whole_dataset=True,
             missing_threshold=10.0,
             run_cv=True,
-            specific_model_for_shaps=SVC(),
+            specific_model_for_shaps=XGBClassifier(random_state=42),
             eval_metric="roc_auc",
             plot_shap=True,
-            plot_bar=False
+            plot_bar=True
         )
 
         target_output = Path(f"results/{category}/{subcategory}")

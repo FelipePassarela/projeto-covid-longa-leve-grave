@@ -256,7 +256,7 @@ def _get_trained_model_path(
 
     :return: Path to the trained model file.
     """
-    if specific_model:
+    if specific_model is not None:
         model_name = get_model_name(specific_model, short=True)
     else:
         std_models_path = Path(models_path) / "standard"

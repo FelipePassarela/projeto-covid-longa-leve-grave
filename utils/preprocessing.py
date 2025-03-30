@@ -38,7 +38,7 @@ def preprocess_data(
         oversample: bool = True
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
-    Preprocess the data by imputing the most frequent value and scaling it.
+    Preprocess the data by imputing the most frequent value.
 
     :param X_train: The training data.
     :param X_test: The testing data.
@@ -52,10 +52,6 @@ def preprocess_data(
     # imputer = KNNImputer(n_neighbors=5)
     X_train = imputer.fit_transform(X_train)
     X_test = imputer.transform(X_test)
-
-    scaler = StandardScaler()
-    X_train = scaler.fit_transform(X_train)
-    X_test = scaler.transform(X_test)
 
     if oversample:
         X_train, y_train = _oversample(X_train, y_train)
