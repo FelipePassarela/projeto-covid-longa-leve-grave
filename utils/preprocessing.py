@@ -11,31 +11,12 @@ from sklearn.preprocessing import StandardScaler
 from utils.models.model_dumping import load_rfe_selector, save_model
 
 
-def load_data(file_path: PathLike, target: str, missing_threshold: float = 10.0) -> pd.DataFrame:
-    """
-    Load data from a CSV file and preprocess it by dropping columns with more 
-    than a specified percentage of missing values.
-
-    :param file_path: Path to the CSV file.
-    :param target: The target variable for the dataset.
-    :param missing_threshold: Maximum percentage of missing values allowed for a column to be kept.
-
-    :return: The dataframe with the data.
-    """
-    df = pd.read_csv(file_path)
-    df = df.dropna(subset=[target])
-    missing_percentage = df.isnull().mean() * 100
-    df = df.drop(columns=missing_percentage[missing_percentage > missing_threshold].index)
-    df = df.drop(columns=["id"])
-    return df
-
-
 def preprocess_data(
         X_train: pd.DataFrame | np.ndarray, 
         X_test: pd.DataFrame | np.ndarray,
         y_train: pd.Series | np.ndarray,
         y_test: pd.Series | np.ndarray,
-        oversample: bool = True
+        oversample: bool = False
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Preprocess the data by imputing the most frequent value.
@@ -44,7 +25,7 @@ def preprocess_data(
     :param X_test: The testing data.
     :param y_train: The training labels.
     :param y_test: The testing labels.
-    :param oversample: Whether to oversample the minority class or not.
+    :param oversample: Whether to oversample the minority class or not. Default is False.
 
     :return: X_train, X_test, y_train, y_test
     """

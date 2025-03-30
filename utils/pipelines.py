@@ -16,7 +16,7 @@ from utils.models.model_dumping import load_rfe_selector, save_model
 from utils.models.models_and_params import get_model_and_params, get_model_name
 from utils.plots.results import plot_boxplot, plot_evals
 from utils.plots.shap import plot_shaps, plot_shaps_bar_plot
-from utils.preprocessing import fit_selector, load_data, preprocess_data
+from utils.preprocessing import fit_selector, preprocess_data
 
 
 def main_pipeline(
@@ -66,12 +66,7 @@ def main_pipeline(
     shap_path = plots_path / "shap"
     selectors_path = models_path / "selectors"
 
-    df = load_data(genomic_data_path, target, missing_threshold=missing_threshold)
-    X = df.drop(columns=[target])
-    y = df[target]
-
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
-    X_train, X_test, y_train, y_test = preprocess_data(X_train, X_test, y_train, y_test, oversample=oversample)
+    X, X_train, X_test, y_train, y_test = data_preparing_pipeline(genomic_data_path, target, oversample, missing_threshold)
 
     selector = load_rfe_selector(1, selectors_path)
     if selector is None:
@@ -127,6 +122,37 @@ def main_pipeline(
         specific_model_for_shaps=specific_model_for_shaps,
         plot_shap=plot_shap, plot_bar=plot_bar
     )
+
+
+def data_preparing_pipeline(
+        genomic_data_path: PathLike, 
+        target: str, 
+        oversample: bool = False, 
+        missing_threshold: float = 10.0
+    ) -> tuple[pd.DataFrame, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Prepares the data for the pipeline by loading, preprocessing, and splitting it.
+    
+    :param genomic_data_path: Path to the genomic data file.
+    :param target: The target variable for the dataset.
+    :param oversample: Whether to oversample the data.
+    :param missing_threshold: Maximum percentage of missing values allowed for a column to be kept.
+
+    :return: tuple like (X, X_train, X_test, y_train, y_test)
+    """
+    df = pd.read_csv(genomic_data_path)
+    df = df.dropna(subset=[target])
+    missing_percentage = df.isnull().mean() * 100
+    df = df.drop(columns=missing_percentage[missing_percentage > missing_threshold].index)
+    df = df.drop(columns=["id"])
+
+    X = df.drop(columns=[target])
+    y = df[target]
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+    X_train, X_test, y_train, y_test = preprocess_data(X_train, X_test, y_train, y_test, oversample=oversample)
+
+    return X, X_train, X_test, y_train, y_test
 
 
 def _plots_pipeline(
