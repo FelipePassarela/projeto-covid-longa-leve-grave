@@ -231,7 +231,7 @@ def main(
     )
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    evaluate_cluster_variants(X_df, clusters, output_dir, n_feats)
+    evaluate_variants_importances(X_df, clusters, output_dir, n_feats)
     evaluate_variants_modes(X_df, clusters, output_dir)
         
     title_suffix = "(Long COVID)" if target == "Long_COVID" else "(Risk COVID)"
@@ -249,7 +249,7 @@ def main(
         show_plot=show_plot,
     )
 
-def evaluate_cluster_variants(
+def evaluate_variants_importances(
         X_df: pd.DataFrame, 
         clusters: np.ndarray,
         output_dir: Path,
