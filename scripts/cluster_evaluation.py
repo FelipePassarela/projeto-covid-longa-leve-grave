@@ -188,6 +188,54 @@ def visualize_clusters(
     plt.close()
 
 
+def evaluate_variants_importances(
+        X_df: pd.DataFrame, 
+        clusters: np.ndarray,
+        output_dir: Path,
+        max_variants_to_report: int = 25
+    ) -> None:
+    """
+    Evaluates the importance of variants for the found clusters using chi-square test.
+
+    :param X_df: DataFrame containing genomic variants
+    :param clusters: Array containing cluster labels
+    :param output_dir: Directory to save results
+    :param max_variants_to_report: Maximum number of variants to report
+    """
+    p_values = {}
+    for col in X_df:
+        contingency_table = pd.crosstab(X_df[col], clusters)
+        _, p, _, _ = chi2_contingency(contingency_table)
+        p_values[col] = p
+
+    sorted_p = sorted(p_values.items(), key=lambda x: x[1])
+    with open(output_dir / f"p_values.txt", 'w') as f:
+        print("Most important variants for clustering:", file=f)
+        for variant, p_val in sorted_p[:max_variants_to_report]:
+            print(f"{variant}: p = {p_val:.4f}", file=f)
+
+
+def evaluate_variants_modes(X_df: pd.DataFrame, clusters: np.ndarray, output_dir: Path) -> None:
+    """
+    Evaluates the modes of variants in each found cluster.
+    
+    :param X_df: DataFrame containing genomic variants
+    :param clusters: Array containing cluster labels
+    :param output_dir: Directory to save results
+    """
+    X_df['Cluster'] = clusters
+    variants_modes = X_df.groupby("Cluster").agg(lambda x: f"{x.mode()[0]} ({(x==x.mode()[0]).mean():.2%})")
+    X_df.drop(columns=['Cluster'], inplace=True)
+
+    print(f"Number of clusters found: {len(variants_modes)}")
+    print("Variants modes:\n", variants_modes)
+
+    save_path = output_dir / f"variants_modes.csv"
+    variants_modes.reset_index(inplace=True)
+    variants_modes.rename(columns={'index': 'Cluster'}, inplace=True)
+    variants_modes.to_csv(save_path, index=False)
+
+
 def main(
         selector_path: Path,
         genomic_path: Path,
@@ -248,53 +296,6 @@ def main(
         save_path=save_path,
         show_plot=show_plot,
     )
-
-def evaluate_variants_importances(
-        X_df: pd.DataFrame, 
-        clusters: np.ndarray,
-        output_dir: Path,
-        max_variants_to_report: int = 25
-    ) -> None:
-    """
-    Evaluates the importance of variants for the found clusters using chi-square test.
-
-    :param X_df: DataFrame containing genomic variants
-    :param clusters: Array containing cluster labels
-    :param output_dir: Directory to save results
-    :param max_variants_to_report: Maximum number of variants to report
-    """
-    p_values = {}
-    for col in X_df:
-        contingency_table = pd.crosstab(X_df[col], clusters)
-        _, p, _, _ = chi2_contingency(contingency_table)
-        p_values[col] = p
-
-    sorted_p = sorted(p_values.items(), key=lambda x: x[1])
-    with open(output_dir / f"p_values.txt", 'w') as f:
-        print("Most important variants for clustering:", file=f)
-        for variant, p_val in sorted_p[:max_variants_to_report]:
-            print(f"{variant}: p = {p_val:.4f}", file=f)
-
-
-def evaluate_variants_modes(X_df: pd.DataFrame, clusters: np.ndarray, output_dir: Path) -> None:
-    """
-    Evaluates the modes of variants in each found cluster.
-    
-    :param X_df: DataFrame containing genomic variants
-    :param clusters: Array containing cluster labels
-    :param output_dir: Directory to save results
-    """
-    X_df['Cluster'] = clusters
-    variants_modes = X_df.groupby("Cluster").agg(lambda x: f"{x.mode()[0]} ({(x==x.mode()[0]).mean():.2%})")
-    X_df.drop(columns=['Cluster'], inplace=True)
-
-    print(f"Number of clusters found: {len(variants_modes)}")
-    print("Variants modes:\n", variants_modes)
-
-    save_path = output_dir / f"variants_modes.csv"
-    variants_modes.reset_index(inplace=True)
-    variants_modes.rename(columns={'index': 'Cluster'}, inplace=True)
-    variants_modes.to_csv(save_path, index=False)
 
 
 if __name__ == "__main__":
