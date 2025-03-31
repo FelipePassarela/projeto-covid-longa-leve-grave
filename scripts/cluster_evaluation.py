@@ -299,14 +299,21 @@ def main(
 
 
 if __name__ == "__main__":
-    main(
-        selector_path=Path("../resultados/30-03-2025/grave/nao_vacinados/models/selectors"),
-        genomic_path=Path("../data/grave/nao_vacinados/merged.csv"),
-        target="risk",
-        n_feats=25,
-        projection_method='tsne',
-        metric='hamming',
-        min_cluster_size=4,
-        show_plot=False,
-        output_dir=Path("../clusters_results/grave/nao_vacinados")
-    )
+    datasets = [
+        ("grave", "nao_vacinados", "risk"),
+        ("longa", "nao_vacinados", "Long_COVID"),
+    ]
+
+    for category, subcategory, target in datasets:
+        print(f"Processing dataset: {category}/{subcategory} with target: {target}")
+        main(
+            selector_path=Path(f"../resultados/30-03-2025/{category}/{subcategory}/models/selectors"),
+            genomic_path=Path(f"../data/{category}/{subcategory}/merged.csv"),
+            target=target,
+            n_feats=25,
+            projection_method='tsne',
+            metric='hamming',
+            min_cluster_size=5,
+            show_plot=False,
+            output_dir=Path(f"../clusters_results/{category}/{subcategory}")
+        )
