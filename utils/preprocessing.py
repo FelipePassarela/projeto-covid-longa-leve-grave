@@ -34,6 +34,10 @@ def preprocess_data(
     X_train = imputer.fit_transform(X_train)
     X_test = imputer.transform(X_test)
 
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
+
     if oversample:
         X_train, y_train = _oversample(X_train, y_train)
 
