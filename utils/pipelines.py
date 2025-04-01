@@ -9,6 +9,7 @@ from sklearn.base import BaseEstimator
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import RFE, SelectorMixin
 from sklearn.model_selection import train_test_split
+from sklearn.svm import SVC
 
 from utils.models.evaluate_models import (EvalResultsDict, evaluate_cv,
                                           evaluate_models)
@@ -66,10 +67,12 @@ def main_pipeline(
     shap_path = plots_path / "shap"
     selectors_path = models_path / "selectors"
 
-    X, X_train, X_test, y_train, y_test = data_preparing_pipeline(genomic_data_path, target, oversample, missing_threshold)
+    X_train, X_test, y_train, y_test = data_preparing_pipeline(genomic_data_path, target, oversample, missing_threshold)
 
     selector = load_rfe_selector(1, selectors_path)
     if selector is None:
+        if isinstance(selector_estim, SVC):
+            selector_estim = SVC(kernel="linear", random_state=42)
         selector = RFE(selector_estim, n_features_to_select=1, step=1, verbose=2)
         fit_selector(
             X_train, X_test, y_train, y_test, 
@@ -86,14 +89,14 @@ def main_pipeline(
     ]
 
     results_standard = evaluate_models(
-        X_train, X_test, y_train, y_test, X.columns,
+        X_train, X_test, y_train, y_test, X_train.columns,
         selector, features_array, models_and_params,
         models_path, results_path, tune=False
     )
     results_tuned = evaluate_models(
-        X_train, X_test, y_train, y_test, X.columns,
+        X_train, X_test, y_train, y_test, X_train.columns,
         selector, features_array, models_and_params,
-        models_path, results_path, tune=True
+        models_path, results_path, tune=False
     )
 
     if run_cv:
@@ -114,8 +117,8 @@ def main_pipeline(
         results_cv = None
 
     _plots_pipeline(
-        X, X_train, X_test, y_test,
-        selector, features_array,
+        X_train, X_test, y_test,
+        selector, features_array, X_train.columns,
         models_path, plots_path, shap_path,
         results_standard, results_tuned, eval_metric,
         model_cv=model_cv, results_cv=results_cv,
@@ -138,7 +141,7 @@ def data_preparing_pipeline(
     :param oversample: Whether to oversample the data.
     :param missing_threshold: Maximum percentage of missing values allowed for a column to be kept.
 
-    :return: tuple like (X, X_train, X_test, y_train, y_test)
+    :return: tuple like (X_train, X_test, y_train, y_test)
     """
     df = pd.read_csv(genomic_data_path)
     df = df.dropna(subset=[target])
@@ -152,20 +155,16 @@ def data_preparing_pipeline(
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
     X_train, X_test, y_train, y_test = preprocess_data(X_train, X_test, y_train, y_test, oversample=oversample)
 
-    X_columns = X.columns
-    X = np.vstack([X_train, X_test])
-    X = pd.DataFrame(X, columns=X_columns)
-
-    return X, X_train, X_test, y_train, y_test
+    return X_train, X_test, y_train, y_test
 
 
 def _plots_pipeline(
-        X: pd.DataFrame | np.ndarray,
         X_train: pd.DataFrame | np.ndarray,
         X_test: pd.DataFrame | np.ndarray,
         y_test: pd.Series | np.ndarray,
         selector: SelectorMixin,
         features_array: list,
+        X_columns: pd.Index,
         models_path: PathLike,
         plots_path: PathLike,
         shap_path: PathLike,
@@ -181,12 +180,12 @@ def _plots_pipeline(
     """
     Generate the plots for the models evaluation.
 
-    :param X: The data.
     :param X_train: The training data.
     :param X_test: The testing data.
     :param y_test: The testing labels.
     :param selector: The feature selector.
     :param features_array: The number of features to be selected.
+    :param X_columns: The columns of the input data.
     :param models_path: The path to the models.
     :param plots_path: The path to save the plots.
     :param shap_path: The path to save the shap plots.
@@ -212,13 +211,13 @@ def _plots_pipeline(
 
     if plot_shap:
         plot_shaps(
-            X_train, X_test, X.columns,
+            X_train, X_test, X_columns,
             selector, features_array,
             models_path, shap_path,
         )
     if plot_bar:
         plot_shaps_bar_plot(
-            X_train, X_test, y_test, X.columns, 
+            X_train, X_test, y_test, X_columns, 
             selector, features_array,
             models_path, bar_plot_path
         )
@@ -229,14 +228,14 @@ def _plots_pipeline(
 
         if plot_shap:
             plot_shaps(
-                X_train, X_test, X.columns,
+                X_train, X_test, X_columns,
                 selector, features_array,
                 models_path, specific_model_path,
                 specific_model=specific_model_for_shaps,
             )
         if plot_bar:
             plot_shaps_bar_plot(
-                X_train, X_test, y_test, X.columns,
+                X_train, X_test, y_test, X_columns,
                 selector, features_array,
                 models_path, specific_model_path_bar_plot,
                 specific_model=specific_model_for_shaps

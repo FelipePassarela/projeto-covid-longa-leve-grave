@@ -210,7 +210,11 @@ def extract_subset(selector, X, n_feats: int):
                 the indices of the selected features.
     """
     feature_indices = np.argsort(selector.ranking_)[:n_feats]
-    subset = X[:, feature_indices]
+    if isinstance(X, pd.DataFrame):
+        selected_columns = X.columns[feature_indices]
+        subset = X[selected_columns]
+    else:
+        subset = X[:, feature_indices]
     return subset, feature_indices
 
 

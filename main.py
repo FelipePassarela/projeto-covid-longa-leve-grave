@@ -17,6 +17,8 @@ __email__ = "felipepassarela11@gmail.com"
 from pathlib import Path
 
 import matplotlib
+import sklearn
+from sklearn.svm import SVC
 from xgboost import XGBClassifier
 
 from utils.pipelines import main_pipeline, move_pipeline_outputs
@@ -24,6 +26,7 @@ from utils.pipelines import main_pipeline, move_pipeline_outputs
 
 def main():
     matplotlib.use("Agg")
+    sklearn.set_config(transform_output="pandas")
 
     datasets = [
         ("27-03-2025", "CL-NAVC", "merged.csv", "RISK"),
