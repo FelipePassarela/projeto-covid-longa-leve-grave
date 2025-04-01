@@ -55,11 +55,11 @@ def main():
             target,
             FEATURES_ARRAY,
             oversample=False,
-            selector_estim=XGBClassifier(random_state=42),
+            selector_estim=SVC(kernel="linear", probability=True, random_state=42),
             fit_selector_on_whole_dataset=True,
             missing_threshold=10.0,
             run_cv=True,
-            specific_model_for_shaps=XGBClassifier(random_state=42),
+            specific_model_for_shaps=SVC(kernel="linear", probability=True, random_state=42),
             eval_metric="roc_auc",
             plot_shap=True,
             plot_bar=True
