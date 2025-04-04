@@ -71,8 +71,6 @@ def main_pipeline(
 
     selector = load_rfe_selector(1, selectors_path)
     if selector is None:
-        if isinstance(selector_estim, SVC):
-            selector_estim = SVC(kernel="linear", random_state=42)
         selector = RFE(selector_estim, n_features_to_select=1, step=1, verbose=2)
         fit_selector(
             X_train, X_test, y_train, y_test, 
@@ -101,6 +99,9 @@ def main_pipeline(
 
     if run_cv:
         model_cv = selector_estim
+        if isinstance(model_cv, SVC):
+            model_cv.set_params(probability=True)
+
         results_cv = evaluate_cv(
             np.concatenate([X_train, X_test]),
             np.concatenate([y_train, y_test]),
