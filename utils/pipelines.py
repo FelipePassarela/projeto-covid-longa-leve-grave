@@ -94,7 +94,7 @@ def main_pipeline(
     results_tuned = evaluate_models(
         X_train, X_test, y_train, y_test, X_train.columns,
         selector, features_array, models_and_params,
-        models_path, results_path, tune=False
+        models_path, results_path, tune=True
     )
 
     if run_cv:
