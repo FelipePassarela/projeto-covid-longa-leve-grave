@@ -18,7 +18,7 @@ def preprocess_data(
         y_train: pd.Series | np.ndarray,
         y_test: pd.Series | np.ndarray,
         oversample: bool = False
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
     """
     Preprocess the data by imputing the most frequent value.
 

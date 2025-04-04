@@ -133,7 +133,7 @@ def data_preparing_pipeline(
         target: str, 
         oversample: bool = False, 
         missing_threshold: float = 10.0
-    ) -> tuple[pd.DataFrame, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
     """
     Prepares the data for the pipeline by loading, preprocessing, and splitting it.
     
