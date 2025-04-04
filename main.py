@@ -55,7 +55,7 @@ def main():
             target,
             FEATURES_ARRAY,
             oversample=False,
-            selector_estim=SVC(kernel="linear", probability=True, random_state=42),
+            selector_estim=SVC(kernel="linear", random_state=42),
             fit_selector_on_whole_dataset=True,
             missing_threshold=10.0,
             run_cv=True,
