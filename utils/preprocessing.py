@@ -1,13 +1,12 @@
-from os import PathLike
 from typing import List, Tuple
 
+import category_encoders as ce
 import numpy as np
 import pandas as pd
 from imblearn.over_sampling import ADASYN
 from sklearn.feature_selection import RFE, SelectorMixin
 from sklearn.impute import KNNImputer, SimpleImputer
-from sklearn.preprocessing import StandardScaler
-import category_encoders as ce
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 from utils.models.model_dumping import load_rfe_selector, save_model
 
@@ -38,6 +37,10 @@ def preprocess_data(
     scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
+
+    # encoder = OneHotEncoder(sparse_output=False, handle_unknown="ignore", drop="first")
+    # X_train = encoder.fit_transform(X_train)
+    # X_test = encoder.transform(X_test)
 
     # encoder = ce.TargetEncoder(cols=X_train.columns)
     # X_train = encoder.fit_transform(X_train, y_train)
