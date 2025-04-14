@@ -160,6 +160,7 @@ def plot_boxplot(
     ax.set_xlabel("Number of SNPs", fontsize=12)
     ax.set_ylabel(score_title, fontsize=12)
     ax.set_title(f"Distribution of {score_title} for {model_name} ({cv}-fold CV)", fontsize=14)
+    ax.axhline(y=0.9, color='r', linestyle='-')
     plt.tight_layout()
 
     fig_path = Path(plots_path) / f"boxplot.png"
