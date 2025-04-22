@@ -83,7 +83,7 @@ def _plot_shap(
     features_names = X_columns[feat_indices]
     shap_values = _calculate_shap_values(model, X_train_selected, X_test_selected, features_names)
 
-    shap.summary_plot(shap_values, X_test_selected, show=False)
+    shap.summary_plot(shap_values, X_test_selected.to_numpy(), show=False)
     plt.title(f"SHAP values of the {get_model_name(model, short=True)} model")
     plt.tight_layout()
 
