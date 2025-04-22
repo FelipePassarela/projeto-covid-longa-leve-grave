@@ -8,7 +8,6 @@ def merge(
         genom_path: str, 
         merged_path: str, 
         target_column: str,
-        convert_to_categorical: bool = False,
     ) -> None:
     """
     Merge the genomic data with the patient information data.
@@ -17,7 +16,6 @@ def merge(
     :param genom_path: The path to the genomic data.
     :param merged_path: The path to save the merged data.
     :param target_column: The name of the target column to merge on.
-    :param convert_to_categorical: Whether to convert columns to categorical type.
     """
     try:
         if not os.path.exists(spreadsheet_path):
@@ -32,7 +30,6 @@ def merge(
 
         df_merged = pd.merge(df_genom, df_info, on='id', how='left')
         df_merged = df_merged.dropna(subset=[target_column])
-        format_column_type(convert_to_categorical, df_merged)
 
         missing_ids = set(df_info['id']) - set(df_merged['id'])
         print("Missing IDs in genomic dataset:", missing_ids)
@@ -42,22 +39,6 @@ def merge(
 
     except FileNotFoundError as e:
         print(e)
-
-
-def format_column_type(convert_to_categorical: bool, df_merged: pd.DataFrame) -> None:
-    """
-    Format the columns of the merged dataframe.
-    
-    :param convert_to_categorical: Whether to convert columns to categorical type.
-    :param df_merged: The merged dataframe to format.
-    """
-    for col in df_merged.columns:
-        if col == 'id': 
-            continue
-        if convert_to_categorical:
-            df_merged[col] = df_merged[col].astype('category')
-        else:
-            df_merged[col] = df_merged[col].astype('float')
 
 
 def format_ids(df_info: pd.DataFrame, df_genom: pd.DataFrame) -> None:
@@ -75,7 +56,7 @@ def format_ids(df_info: pd.DataFrame, df_genom: pd.DataFrame) -> None:
 
 
 if __name__ == "__main__":
-    genomic_path = "data/genomics/matriz_TESTE_4_AGORA.csv"
+    genomic_path = "data/genomics/matriz_TESTE_2_AGORA.csv"
     datasets = [
         ("data/grave/geral/planilha.csv", genomic_path, "data/grave/geral/merged.csv", "risk"),
         ("data/grave/nao_vacinados/planilha.csv", genomic_path, "data/grave/nao_vacinados/merged.csv", "risk"),
@@ -90,4 +71,4 @@ if __name__ == "__main__":
     
     for spreadsheet_path, genom_path, save_path, target_column in datasets:
         print(f"Merging {spreadsheet_path} with {genom_path} on column {target_column}")
-        merge(spreadsheet_path, genom_path, save_path, target_column, convert_to_categorical=False)
+        merge(spreadsheet_path, genom_path, save_path, target_column)
