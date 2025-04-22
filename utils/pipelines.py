@@ -125,7 +125,7 @@ def main_pipeline(
 
     _plots_pipeline(
         X_train, X_test, y_test,
-        selector, features_array, X_train.columns,
+        selector, features_array,
         models_path, plots_path, shap_path,
         results_standard, results_tuned, eval_metric,
         model_cv=model_cv, results_cv=results_cv,
@@ -177,7 +177,6 @@ def _plots_pipeline(
         y_test: pd.Series | np.ndarray,
         selector: SelectorMixin,
         features_array: list,
-        X_columns: pd.Index,
         models_path: PathLike,
         plots_path: PathLike,
         shap_path: PathLike,
@@ -198,7 +197,6 @@ def _plots_pipeline(
     :param y_test: The testing labels.
     :param selector: The feature selector.
     :param features_array: The number of features to be selected.
-    :param X_columns: The columns of the input data.
     :param models_path: The path to the models.
     :param plots_path: The path to save the plots.
     :param shap_path: The path to save the shap plots.
@@ -224,13 +222,13 @@ def _plots_pipeline(
 
     if plot_shap:
         plot_shaps(
-            X_train, X_test, X_columns,
+            X_train, X_test,
             selector, features_array,
             models_path, shap_path,
         )
     if plot_bar:
         plot_shaps_bar_plot(
-            X_train, X_test, y_test, X_columns, 
+            X_train, X_test, y_test, 
             selector, features_array,
             models_path, bar_plot_path
         )
@@ -241,14 +239,14 @@ def _plots_pipeline(
 
         if plot_shap:
             plot_shaps(
-                X_train, X_test, X_columns,
+                X_train, X_test,
                 selector, features_array,
                 models_path, specific_model_path,
                 specific_model=specific_model_for_shaps,
             )
         if plot_bar:
             plot_shaps_bar_plot(
-                X_train, X_test, y_test, X_columns,
+                X_train, X_test, y_test,
                 selector, features_array,
                 models_path, specific_model_path_bar_plot,
                 specific_model=specific_model_for_shaps

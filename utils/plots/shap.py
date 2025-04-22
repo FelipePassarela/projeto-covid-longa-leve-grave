@@ -19,9 +19,8 @@ from utils.models.models_and_params import get_model_name
 
 def _calculate_shap_values(
         model: BaseEstimator,
-        X_train_selected: np.ndarray,
-        X_test_selected: np.ndarray,
-        feature_names: pd.Index
+        X_train_selected: pd.DataFrame,
+        X_test_selected: pd.DataFrame,
     ) -> shap.Explanation:
     """
     Calculate SHAP values for the given model and data.
@@ -29,7 +28,6 @@ def _calculate_shap_values(
     :param model: The trained model to explain
     :param X_train_selected: Training data used for background distribution
     :param X_test_selected: Test data to explain
-    :param feature_names: Names of the features
 
     :return: SHAP values for the test data
     """
@@ -51,7 +49,7 @@ def _calculate_shap_values(
         values=raw_shap_values,
         base_values=base_value,
         data=X_test_selected,
-        feature_names=feature_names
+        feature_names=X_test_selected.columns
     )
 
     return shap_values
@@ -60,7 +58,6 @@ def _calculate_shap_values(
 def _plot_shap(
         X_train: pd.DataFrame | np.ndarray,
         X_test: pd.DataFrame | np.ndarray,
-        X_columns: pd.Index,
         model: BaseEstimator,
         selector: RFE,
         n_feats: int,
@@ -71,7 +68,6 @@ def _plot_shap(
 
     :param X_train: The training data.
     :param X_test: The testing data.
-    :param X_columns: The columns of the data.
     :param model: The trained model to explain.
     :param selector: The feature selector used to select the features.
     :param n_feats: Number of features to select.
@@ -80,8 +76,7 @@ def _plot_shap(
 
     X_train_selected, _ = extract_subset(selector, X_train, n_feats)
     X_test_selected, feat_indices = extract_subset(selector, X_test, n_feats)
-    features_names = X_columns[feat_indices]
-    shap_values = _calculate_shap_values(model, X_train_selected, X_test_selected, features_names)
+    shap_values = _calculate_shap_values(model, X_train_selected, X_test_selected)
 
     shap.summary_plot(shap_values, X_test_selected.to_numpy(), show=False)
     plt.title(f"SHAP values of the {get_model_name(model, short=True)} model")
@@ -130,7 +125,6 @@ def _get_best_model(
 def plot_shaps(
         X_train: pd.DataFrame | np.ndarray,
         X_test: pd.DataFrame | np.ndarray,
-        X_columns: pd.Index,
         selector: RFE,
         features_array: list[int],
         models_path: str,
@@ -145,7 +139,6 @@ def plot_shaps(
 
     :param X_train: The training data.
     :param X_test: The testing data.
-    :param X_columns: The columns of the data.
     :param models_path: Path to the directory containing the model files.
     :param save_path: Path to the directory where the plots will be saved.
     :param specific_model: Specific model to plot the SHAP values for. If
@@ -160,14 +153,13 @@ def plot_shaps(
             model = pickle.load(f)
         print(f"{get_model_name(model, short=True)} - {n_feats} features")
 
-        _plot_shap(X_train, X_test, X_columns, model, selector, n_feats, save_path)
+        _plot_shap(X_train, X_test, model, selector, n_feats, save_path)
 
 
 def _plot_shap_bar_plot(
-        X_train: pd.DataFrame | np.ndarray,
-        X_test: pd.DataFrame | np.ndarray,
-        y_test: pd.Series | np.ndarray,
-        X_columns: pd.Index,
+        X_train: pd.DataFrame,
+        X_test: pd.DataFrame,
+        y_test: pd.Series,
         model: BaseEstimator,
         selector: RFE,
         n_feats: int,
@@ -179,7 +171,6 @@ def _plot_shap_bar_plot(
     :param X_train: The training data.
     :param X_test: The testing data.
     :param y_test: The testing labels.
-    :param X_columns: The columns of the data.
     :param model: The trained model to explain.
     :param selector: The feature selector used to select the features.
     :param n_feats: Number of features to select.
@@ -188,8 +179,7 @@ def _plot_shap_bar_plot(
 
     X_train_selected, _ = extract_subset(selector, X_train, n_feats)
     X_test_selected, feat_indices = extract_subset(selector, X_test, n_feats)
-    features_names = X_columns[feat_indices]
-    shap_values = _calculate_shap_values(model, X_train_selected, X_test_selected, features_names)
+    shap_values = _calculate_shap_values(model, X_train_selected, X_test_selected)
 
     clustering = shap.utils.hclust(X_test_selected, y_test) if n_feats > 1 else None
     shap.plots.bar(shap_values, clustering=clustering, show=False, max_display=21)
@@ -204,10 +194,9 @@ def _plot_shap_bar_plot(
 
 
 def plot_shaps_bar_plot(
-        X_train: pd.DataFrame | np.ndarray,
-        X_test: pd.DataFrame | np.ndarray,
-        y_test: pd.Series | np.ndarray,
-        X_columns: pd.Index,
+        X_train: pd.DataFrame,
+        X_test: pd.DataFrame,
+        y_test: pd.Series,
         selector: RFE,
         features_array: list[int],
         models_path: PathLike,
@@ -223,7 +212,6 @@ def plot_shaps_bar_plot(
     :param X_train: The training data.
     :param X_test: The testing data.
     :param y_test: The testing labels.
-    :param X_columns: The columns of the data.
     :param models_path: Path to the directory containing the model files.
     :param save_path: Path to the directory where the plots will be saved.
     :param specific_model: Specific model to plot the SHAP values for. If
@@ -238,7 +226,7 @@ def plot_shaps_bar_plot(
             model = pickle.load(f)
         print(f"{get_model_name(model, short=True)} - {n_feats} features")
 
-        _plot_shap_bar_plot(X_train, X_test, y_test, X_columns, model, selector, n_feats, save_path)
+        _plot_shap_bar_plot(X_train, X_test, y_test, model, selector, n_feats, save_path)
 
 
 def _get_trained_model_path(
