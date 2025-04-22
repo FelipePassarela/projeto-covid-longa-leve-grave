@@ -7,11 +7,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import shap
+import seaborn as sns
 from matplotlib import pyplot as plt
 from sklearn.base import BaseEstimator
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import RFE
 from xgboost import XGBClassifier
+import xgboost
 
 from utils.models.evaluate_models import extract_subset
 from utils.models.models_and_params import get_model_name
@@ -55,6 +57,29 @@ def _calculate_shap_values(
     return shap_values
 
 
+def _calculate_shap_interactions_values(
+        model: BaseEstimator,
+        X_test_selected: pd.DataFrame,
+    ) -> shap.Explanation:
+    """
+    Calculate SHAP interaction values for the given model and data.
+
+    :param model: The trained model to explain
+    :param X_test_selected: Test data to explain
+
+    :return: SHAP interaction values for the test data
+    """
+    if not isinstance(model, XGBClassifier):
+        raise ValueError("SHAP interaction values are only supported for XGBClassifier.")
+    if model.get_params()["enable_categorical"] is False:
+        raise ValueError("SHAP interaction values are only supported for XGBClassifier with enable_categorical=True.")
+    
+    explainer = shap.TreeExplainer(model)
+    dmatrix = xgboost.DMatrix(X_test_selected, enable_categorical=True)
+    shap_interaction_values = explainer.shap_interaction_values(dmatrix)
+    return shap_interaction_values
+
+
 def _plot_shap(
         X_train: pd.DataFrame | np.ndarray,
         X_test: pd.DataFrame | np.ndarray,
@@ -81,6 +106,45 @@ def _plot_shap(
     shap.summary_plot(shap_values, X_test_selected.to_numpy(), show=False)
     plt.title(f"SHAP values of the {get_model_name(model, short=True)} model")
     plt.tight_layout()
+
+    save_path = Path(save_path)
+    save_path.mkdir(parents=True, exist_ok=True)
+    plt.savefig(save_path / f"{n_feats}feats.png")
+    plt.clf()
+    plt.close()
+
+
+def plot_shap_interaction_matrix(
+        X_test_selected: pd.DataFrame, 
+        model: BaseEstimator,
+        n_feats: int,
+        save_path: PathLike, 
+    ) -> None:
+    """
+    Plot the SHAP interaction values for the given model and number of features.
+    
+    :param X_test_selected: The test data.
+    :param model: The trained model to explain.
+    :param n_feats: Number of features to select.
+    :param save_path: Path to the directory where the plots will be saved.
+    """
+    shap_interaction = _calculate_shap_interactions_values(model, X_test_selected)
+
+    mean_shap = np.abs(shap_interaction).mean(0)
+    features_names = X_test_selected.columns
+    df = pd.DataFrame(mean_shap, index=features_names, columns=features_names)
+
+    # times off diagonal by 2
+    df.where(df.values == np.diagonal(df), df.values * 2, inplace=True)
+
+    fig = plt.figure(figsize=(35, 20))
+    ax = fig.add_subplot()
+    sns.heatmap(df.round(decimals=3), cmap='coolwarm', annot=True, fmt='.6g', cbar=False, ax=ax)
+    plt.xticks(rotation=45, ha='right')
+
+    model_name = get_model_name(model, short=True)
+    title = f"SHAP interaction values of the {model_name} model - {n_feats} features"
+    plt.suptitle(title, color="white", fontsize=60, y=0.97)
 
     save_path = Path(save_path)
     save_path.mkdir(parents=True, exist_ok=True)
