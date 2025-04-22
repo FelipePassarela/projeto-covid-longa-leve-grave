@@ -67,7 +67,13 @@ def main_pipeline(
     shap_path = plots_path / "shap"
     selectors_path = models_path / "selectors"
 
-    X_train, X_test, y_train, y_test = data_preparing_pipeline(genomic_data_path, target, oversample, missing_threshold)
+    X_train, X_test, y_train, y_test = data_preparing_pipeline(
+        genomic_data_path, 
+        target, 
+        oversample, 
+        missing_threshold,
+        to_categorical=False
+    )
 
     selector = load_rfe_selector(1, selectors_path)
     if selector is None:
@@ -132,7 +138,8 @@ def data_preparing_pipeline(
         genomic_data_path: PathLike, 
         target: str, 
         oversample: bool = False, 
-        missing_threshold: float = 10.0
+        missing_threshold: float = 10.0,
+        to_categorical: bool = False
     ) -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
     """
     Prepares the data for the pipeline by loading, preprocessing, and splitting it.
@@ -141,6 +148,7 @@ def data_preparing_pipeline(
     :param target: The target variable for the dataset.
     :param oversample: Whether to oversample the data.
     :param missing_threshold: Maximum percentage of missing values allowed for a column to be kept.
+    :param to_categorical: Whether to convert the data to categorical type.
 
     :return: tuple like (X_train, X_test, y_train, y_test)
     """
@@ -155,6 +163,10 @@ def data_preparing_pipeline(
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
     X_train, X_test, y_train, y_test = preprocess_data(X_train, X_test, y_train, y_test, oversample=oversample)
+
+    if to_categorical:
+        X_train = X_train.astype("category")
+        X_test = X_test.astype("category")
 
     return X_train, X_test, y_train, y_test
 
