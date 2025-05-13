@@ -34,11 +34,20 @@ def merge(
         missing_ids = set(df_info['id']) - set(df_merged['id'])
         print("Missing IDs in genomic dataset:", missing_ids)
 
+        print_duplicated_ids(df_merged)
+
         df_merged.to_csv(merged_path, index=False)
         print("Data merged and saved successfully.")
 
     except FileNotFoundError as e:
         print(e)
+
+
+def print_duplicated_ids(df_merged: pd.DataFrame):
+    duplicated_ids = df_merged[df_merged.duplicated(['id'], keep=False)]
+    if not duplicated_ids.empty:
+        print("Duplicated IDs in merged dataset:")
+        print(duplicated_ids['id'].drop_duplicates())
 
 
 def format_ids(df_info: pd.DataFrame, df_genom: pd.DataFrame) -> None:
@@ -51,6 +60,7 @@ def format_ids(df_info: pd.DataFrame, df_genom: pd.DataFrame) -> None:
     df_info['id'] = df_info['id'].astype(str).str.strip()
     df_genom['id'] = df_genom['id'].astype(str).str.strip()
     df_genom['id'] = df_genom['id'].str.replace("UFES_", "")
+    df_genom['id'] = df_genom['id'].str.replace("-2", "")
     df_genom['id'] = df_genom['id'].str.lstrip("0")
     df_genom['id'] = df_genom['id'].str.replace("-", "_")
 
@@ -72,3 +82,4 @@ if __name__ == "__main__":
     for spreadsheet_path, genom_path, save_path, target_column in datasets:
         print(f"Merging {spreadsheet_path} with {genom_path} on column {target_column}")
         merge(spreadsheet_path, genom_path, save_path, target_column)
+        print()
