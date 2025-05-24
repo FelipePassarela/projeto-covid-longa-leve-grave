@@ -32,7 +32,7 @@ def merge(
         df_merged = df_merged.dropna(subset=[target_column])
 
         missing_ids = set(df_info['id']) - set(df_merged['id'])
-        print("Missing IDs in genomic dataset:", missing_ids)
+        print("Missing IDs in merged dataset:", missing_ids)
 
         print_duplicated_ids(df_merged)
 
