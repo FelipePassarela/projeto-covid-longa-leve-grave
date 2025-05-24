@@ -27,9 +27,10 @@ def vcf_to_csv(vcf_file: PathLike, csv_file: PathLike):
         assert all(sample.startswith("UFES") for sample in sample_dict), "Not all samples start with 'UFES'"
 
         headers = []
+        n_variants = sum(1 for _ in vcf.fetch())
 
         for i, rec in enumerate(vcf.fetch()):
-            print(f"Processing record {i + 1}, chr{rec.chrom}:{rec.pos}".ljust(80), end='\r')
+            print(f"Processing record {i + 1}/{n_variants}, chr{rec.chrom}:{rec.pos}".ljust(100), end='\r')
             headers.append(f"chr{rec.chrom}_{rec.pos}")
 
             for sample in rec.samples:
