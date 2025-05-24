@@ -27,6 +27,7 @@ def main_pipeline(
         oversample: bool = False,
         selector_estim: BaseEstimator = RandomForestClassifier(random_state=42, n_jobs=-1),
         fit_selector_on_whole_dataset: bool = False,
+        to_categorical: bool = False,
         missing_threshold: float = 10.0,
         run_cv: bool = True,
         specific_model_for_shaps: BaseEstimator = None,
@@ -53,6 +54,7 @@ def main_pipeline(
     :param oversample: Whether to oversample the data. Default is False.
     :param selector_estim: The estimator to be used for feature selection. Default is RandomForestClassifier.
     :param fit_selector_on_whole_dataset: Whether to fit the selector on the whole dataset. Default is False.
+    :param to_categorical: Whether to convert the data to categorical type. Utilized for XGBoost. Default is False.
     :param missing_threshold: Maximum percentage of missing values allowed for a column to be kept. Default is 10.0.
     :param run_cv: Whether to run cross-validation. Default is True.
     :param specific_model_for_shaps: A specific model to generate SHAP plots for. If None,
@@ -72,7 +74,7 @@ def main_pipeline(
         target, 
         oversample, 
         missing_threshold,
-        to_categorical=False
+        to_categorical=to_categorical
     )
 
     selector = load_rfe_selector(1, selectors_path)

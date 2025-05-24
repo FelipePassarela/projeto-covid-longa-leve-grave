@@ -57,6 +57,7 @@ def main():
             oversample=False,
             selector_estim=SVC(kernel="linear", random_state=42),
             fit_selector_on_whole_dataset=True,
+            to_categorical=False,
             missing_threshold=10.0,
             run_cv=True,
             specific_model_for_shaps=SVC(kernel="linear", probability=True, random_state=42),
