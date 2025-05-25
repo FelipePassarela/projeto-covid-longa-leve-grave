@@ -55,7 +55,7 @@ def get_model_and_params(model_name: str) -> Tuple[BaseEstimator, HyperParamGrid
             }
         ),
         "xgboost": (
-            XGBClassifier(random_state=42),
+            XGBClassifier(random_state=42, enable_categorical=True),
             {
                 "n_estimators": randint(100, 301),
                 "max_depth": randint(3, 6),
