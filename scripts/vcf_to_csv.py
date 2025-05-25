@@ -5,7 +5,7 @@ import argparse
 from os import PathLike
 
 import pandas as pd
-from pysam import VariantFile
+from pysam import VariantFile  # type: ignore
 
 
 def vcf_to_csv(vcf_file: PathLike, csv_file: PathLike):
