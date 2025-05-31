@@ -28,10 +28,10 @@ def main_pipeline(
         oversample: bool = False,
         selector_estim: BaseEstimator = RandomForestClassifier(random_state=42, n_jobs=-1),
         fit_selector_on_whole_dataset: bool = False,
-        to_categorical: bool = False,
+        to_categorical: bool = True,
         missing_threshold: float = 10.0,
         run_cv: bool = True,
-        shap_target_model: str | BaseEstimator | list[BaseEstimator] | None = "best_performing",
+        shap_target_model: str | BaseEstimator | List[BaseEstimator] | None = "best_performing",
         plot_bar: bool = False,
         eval_metric: str = "roc_auc",
     ) -> None:
@@ -54,7 +54,9 @@ def main_pipeline(
     :param oversample: Whether to oversample the data. Default is False.
     :param selector_estim: The estimator to be used for feature selection. Default is RandomForestClassifier.
     :param fit_selector_on_whole_dataset: Whether to fit the selector on the whole dataset. Default is False.
-    :param to_categorical: Whether to convert the data to categorical type. Utilized for XGBoost. Default is False.
+    :param to_categorical: Whether to convert the data to categorical type. Default is True.
+        This is useful for models that benefit from categorical data, such as XGBoost.
+        Note: The data is kept as numerical besides this parameter being True, so other models can still be trained.
     :param missing_threshold: Maximum percentage of missing values allowed for a column to be kept. Default is 10.0.
     :param run_cv: Whether to run cross-validation. Default is True.
     :param shap_target_model: Specifies which model(s) to generate SHAP summary plots for. Default is "best_performing".
@@ -143,7 +145,7 @@ def data_preparing_pipeline(
         target: str, 
         oversample: bool = False, 
         missing_threshold: float = 10.0,
-        to_categorical: bool = False
+        to_categorical: bool = True,
     ) -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
     """
     Prepares the data for the pipeline by loading, preprocessing, and splitting it.
@@ -152,7 +154,8 @@ def data_preparing_pipeline(
     :param target: The target variable for the dataset.
     :param oversample: Whether to oversample the data.
     :param missing_threshold: Maximum percentage of missing values allowed for a column to be kept.
-    :param to_categorical: Whether to convert the data to categorical type.
+    :param to_categorical: Whether to convert the data to categorical type. Default is True.
+        Note: The data is kept as numerical besides this parameter being True, so statistical models can still be trained.
 
     :return: tuple like (X_train, X_test, y_train, y_test)
     """
