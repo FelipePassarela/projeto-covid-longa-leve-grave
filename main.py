@@ -29,9 +29,6 @@ def main():
     sklearn.set_config(transform_output="pandas")
 
     datasets = [
-        ("27-03-2025", "CL-NAVC", "merged.csv", "RISK"),
-        ("27-03-2025", "SCL-NVC", "merged.csv", "RISK"),
-        
         ("grave", "geral", "merged.csv", "risk"),
         ("grave", "nao_vacinados", "merged.csv", "risk"),
 
