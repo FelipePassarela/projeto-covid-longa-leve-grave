@@ -19,17 +19,24 @@ def filter_variants(csv_genomic: Path, csv_variant: Path) -> pd.DataFrame:
     logging.info(f"Loading variant data from {csv_variant}")
     df_variant = pd.read_csv(csv_variant)
 
-    df_variants_to_keep = "chr" + df_variant["Chr"].astype(str) + "_" + df_variant["Start"].astype(str)
+    # Validate required columns exist
+    required_columns = ["Chr", "Start"]
+    missing_cols = [col for col in required_columns if col not in df_variant.columns]
+    if missing_cols:
+        raise ValueError(f"Missing required columns in variant file: {missing_cols}")
+    
+    variant_identifiers = "chr" + df_variant["Chr"].fillna("").astype(str) + "_" + df_variant["Start"].fillna("").astype(str)
+    
     total_variants = sum(col.startswith("chr") for col in df_genomic.columns)
-    logging.info(f"Found {len(df_variants_to_keep)} variants in the variant file.")
+    logging.info(f"Found {len(variant_identifiers)} variants in the variant file.")
     logging.info(f"Found {total_variants} variants in the genomic file.")
 
     columns_to_keep = [col for col in df_genomic.columns if not col.startswith("chr")]
-    existing_variants_to_keep = [var for var in df_variants_to_keep if var in df_genomic.columns]
+    existing_variants_to_keep = [var for var in variant_identifiers if var in df_genomic.columns]
     columns_to_keep += existing_variants_to_keep
     
-    if len(existing_variants_to_keep) < len(df_variants_to_keep):
-        n_missing_variants = len(df_variants_to_keep) - len(existing_variants_to_keep)
+    if len(existing_variants_to_keep) < len(variant_identifiers):
+        n_missing_variants = len(variant_identifiers) - len(existing_variants_to_keep)
         logging.warning(f"{n_missing_variants} variants from the variant file were"
                         f" not found in the genomic file and will be ignored.")
 
