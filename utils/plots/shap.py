@@ -41,7 +41,7 @@ def _calculate_shap_values(
         raw_shap_values = explainer.shap_values(X_test_selected)[:, :, 1]
     else:
         background = shap.sample(X_train_selected, 100)
-        explainer = shap.KernelExplainer(model.predict, background)
+        explainer = shap.KernelExplainer(model.predict, background, seed=42)
         raw_shap_values = explainer.shap_values(X_test_selected)
     
     exp_val = explainer.expected_value
