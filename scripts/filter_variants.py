@@ -45,8 +45,8 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
 
     parser = argparse.ArgumentParser(description="Filter variants from a CSV file based on genomic data.")
-    parser.add_argument("csv_genomic", type=Path, help="CSV file containing the variants to filter.")
-    parser.add_argument("csv_variant", type=Path, help="CSV file containing the variants to filter against.")
+    parser.add_argument("csv_genomic", type=Path, help="CSV file containing genomic data with variant columns to be filtered.")
+    parser.add_argument("csv_variant", type=Path, help="CSV file containing the list of variants to keep.")
     
     args = parser.parse_args()
 
