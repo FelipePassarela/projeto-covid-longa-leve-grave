@@ -60,10 +60,9 @@ def main():
             to_categorical=False,
             missing_threshold=10.0,
             run_cv=True,
-            specific_model_for_shaps=SVC(kernel="linear", probability=True, random_state=42),
+            shap_target_model=SVC(),
+            plot_bar=False,
             eval_metric="roc_auc",
-            plot_shap=True,
-            plot_bar=True
         )
 
         target_output = Path(f"results/{category}/{subcategory}")

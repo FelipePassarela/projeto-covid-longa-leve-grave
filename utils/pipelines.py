@@ -2,6 +2,7 @@ import os
 import shutil
 from os import PathLike
 from pathlib import Path
+from typing import List
 
 import numpy as np
 import pandas as pd
@@ -30,10 +31,9 @@ def main_pipeline(
         to_categorical: bool = False,
         missing_threshold: float = 10.0,
         run_cv: bool = True,
-        specific_model_for_shaps: BaseEstimator = None,
+        shap_target_model: str | BaseEstimator | list[BaseEstimator] | None = "best_performing",
+        plot_bar: bool = False,
         eval_metric: str = "roc_auc",
-        plot_shap: bool = True,
-        plot_bar: bool = False
     ) -> None:
     """
     Executes the main pipeline of the project.
@@ -57,11 +57,13 @@ def main_pipeline(
     :param to_categorical: Whether to convert the data to categorical type. Utilized for XGBoost. Default is False.
     :param missing_threshold: Maximum percentage of missing values allowed for a column to be kept. Default is 10.0.
     :param run_cv: Whether to run cross-validation. Default is True.
-    :param specific_model_for_shaps: A specific model to generate SHAP plots for. If None,
-        only the plots for the best model will be generated. Default is None.
+    :param shap_target_model: Specifies which model(s) to generate SHAP summary plots for. Default is "best_performing".
+        - "best_performing": SHAP plots for the best performing model.
+        - BaseEstimator: SHAP plots for the specified model.
+        - List[BaseEstimator]: SHAP plots for each model in the list.
+        - None: No SHAP summary plots will be generated.
+    :param plot_bar: Whether to plot the SHAP bar plot in addition to summary plots. Default is False.
     :param eval_metric: The evaluation metric to use. Default is "roc_auc".
-    :param plot_shap: Whether to plot the SHAP values. Default is True.
-    :param plot_bar: Whether to plot the SHAP bar plot. Default is False.
     """
     models_path = Path("output/models/")
     results_path = Path("output/results/")
@@ -131,8 +133,8 @@ def main_pipeline(
         models_path, plots_path, shap_path,
         results_standard, results_tuned, eval_metric,
         model_cv=model_cv, results_cv=results_cv,
-        specific_model_for_shaps=specific_model_for_shaps,
-        plot_shap=plot_shap, plot_bar=plot_bar
+        shap_target_model=shap_target_model,
+        plot_bar=plot_bar
     )
 
 
@@ -187,8 +189,7 @@ def _plots_pipeline(
         eval_metric: str,
         model_cv: BaseEstimator = None,
         results_cv: pd.DataFrame = None,
-        specific_model_for_shaps: BaseEstimator = None,
-        plot_shap: bool = True,
+        shap_target_model: str | BaseEstimator | list[BaseEstimator] | None = "best_performing",
         plot_bar: bool = False
     ) -> None:
     """
@@ -209,9 +210,11 @@ def _plots_pipeline(
         the cross-validation plots will not be generated.
     :param results_cv: The results for the cross-validation. If None, 
         the cross-validation plots will not be generated.
-    :param specific_model_for_shaps: A specific model to generate the shap plots. If None,
-        only the plots for the best model will be generated. Default is None.
-    :param plot_shap: Whether to plot the SHAP values. Default is True.
+    :param shap_target_model: Specifies which model(s) to generate SHAP summary plots for. Default is "best_performing".
+        - "best_performing": SHAP plots for the best performing model.
+        - BaseEstimator: SHAP plots for the specified model.
+        - List[BaseEstimator]: SHAP plots for each model in the list.
+        - None: No SHAP summary plots will be generated.
     :param plot_bar: Whether to plot the SHAP bar plot. Default is False.
     """
     plot_evals(plots_path, results_standard, results_tuned, eval_metric)
@@ -219,40 +222,41 @@ def _plots_pipeline(
     if model_cv is not None and results_cv is not None:
         cv_model_name = get_model_name(model_cv, short=True)
         plot_boxplot(results_cv, cv_model_name, plots_path, eval_metric)
+    
+    if shap_target_model is not None:
+        models_for_shap = []
 
-    bar_plot_path = shap_path / "bar_plot"
+        if shap_target_model == "best_performing":
+            models_for_shap = [None]
+        elif isinstance(shap_target_model, BaseEstimator):
+            models_for_shap = [shap_target_model]
+        elif isinstance(shap_target_model, list) and all(isinstance(model, BaseEstimator) for model in shap_target_model):
+            models_for_shap = shap_target_model
+        else:
+            raise ValueError("shap_target_model must be 'best_performing', a BaseEstimator, or a list of BaseEstimators.")
+        
+        bar_plot_path = shap_path / "bar_plot"
 
-    if plot_shap:
-        plot_shaps(
-            X_train, X_test,
-            selector, features_array,
-            models_path, shap_path,
-        )
-    if plot_bar:
-        plot_shaps_bar_plot(
-            X_train, X_test, y_test, 
-            selector, features_array,
-            models_path, bar_plot_path
-        )
+        for model_instance in models_for_shap:
+            model_name_str = get_model_name(model_instance, short=True).lower() if model_instance is not None else "best_by_N_variants"
+            current_shap_path = shap_path / model_name_str
+            current_bar_plot_path = bar_plot_path / model_name_str
 
-    if specific_model_for_shaps is not None:
-        specific_model_path = shap_path / get_model_name(specific_model_for_shaps, short=True).lower()
-        specific_model_path_bar_plot = bar_plot_path / get_model_name(specific_model_for_shaps, short=True).lower()
-
-        if plot_shap:
             plot_shaps(
                 X_train, X_test,
                 selector, features_array,
-                models_path, specific_model_path,
-                specific_model=specific_model_for_shaps,
+                models_path, current_shap_path,
+                specific_model=model_instance,
             )
-        if plot_bar:
-            plot_shaps_bar_plot(
-                X_train, X_test, y_test,
-                selector, features_array,
-                models_path, specific_model_path_bar_plot,
-                specific_model=specific_model_for_shaps
-            )
+            if plot_bar:
+                plot_shaps_bar_plot(
+                    X_train, X_test, y_test,
+                    selector, features_array,
+                    models_path, current_bar_plot_path,
+                    specific_model=model_instance
+                )
+    else:
+        print("No SHAP summary plots will be generated.")
 
 
 def move_pipeline_outputs(target_path: PathLike) -> None:
