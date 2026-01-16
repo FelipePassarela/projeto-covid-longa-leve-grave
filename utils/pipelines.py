@@ -22,7 +22,7 @@ from utils.preprocessing import fit_selector, preprocess_data
 
 
 def main_pipeline(
-        genomic_data_path: PathLike, 
+        genomic_data_path: PathLike,
         target: str,
         features_array: list[int],
         oversample: bool = False,
@@ -30,7 +30,7 @@ def main_pipeline(
         fit_selector_on_whole_dataset: bool = False,
         to_categorical: bool = True,
         missing_threshold: float = 10.0,
-        run_cv: bool = True,
+        cv_target_model: BaseEstimator = None,
         shap_target_model: str | BaseEstimator | List[BaseEstimator] | None = "best_performing",
         plot_bar: bool = False,
         eval_metric: str = "roc_auc",
@@ -38,7 +38,7 @@ def main_pipeline(
     """
     Executes the main pipeline of the project.
 
-    Loads genomic data, preprocesses it, trains various machine learning models with different 
+    Loads genomic data, preprocesses it, trains various machine learning models with different
     feature sets, and evaluates their performance. Also generates visualization plots and
     SHAP value analysis.
 
@@ -58,7 +58,7 @@ def main_pipeline(
         This is useful for models that benefit from categorical data, such as XGBoost.
         Note: The data is kept as numerical besides this parameter being True, so other models can still be trained.
     :param missing_threshold: Maximum percentage of missing values allowed for a column to be kept. Default is 10.0.
-    :param run_cv: Whether to run cross-validation. Default is True.
+    :param cv_target_model: The model to be used for cross-validation. If None, cross-validation will not be performed.
     :param shap_target_model: Specifies which model(s) to generate SHAP summary plots for. Default is "best_performing".
         - "best_performing": SHAP plots for the best performing model.
         - BaseEstimator: SHAP plots for the specified model.
@@ -74,9 +74,9 @@ def main_pipeline(
     selectors_path = models_path / "selectors"
 
     X_train, X_test, y_train, y_test = data_preparing_pipeline(
-        genomic_data_path, 
-        target, 
-        oversample, 
+        genomic_data_path,
+        target,
+        oversample,
         missing_threshold,
         to_categorical=to_categorical
     )
@@ -85,7 +85,7 @@ def main_pipeline(
     if selector is None:
         selector = RFE(selector_estim, n_features_to_select=1, step=1, verbose=2)
         fit_selector(
-            X_train, X_test, y_train, y_test, 
+            X_train, X_test, y_train, y_test,
             selector, on_whole_dataset=fit_selector_on_whole_dataset
         )
     save_model(selector, 1, selectors_path)
@@ -109,15 +109,15 @@ def main_pipeline(
         models_path, results_path, tune=True
     )
 
-    if run_cv:
-        model_cv = selector_estim
-        if isinstance(model_cv, SVC):
-            model_cv.set_params(probability=True)
+    results_cv = None
+    if cv_target_model is not None:
+        if isinstance(cv_target_model, SVC):
+            cv_target_model.set_params(probability=True)
 
         results_cv = evaluate_cv(
             np.concatenate([X_train, X_test]),
             np.concatenate([y_train, y_test]),
-            model=model_cv,
+            model=cv_target_model,
             selector=selector,
             features_array=features_array,
             results_path=results_path,
@@ -125,31 +125,28 @@ def main_pipeline(
             cv=5,
             fitted_on_whole_dataset=fit_selector_on_whole_dataset
         )
-    else:
-        model_cv = None
-        results_cv = None
 
     _plots_pipeline(
         X_train, X_test, y_test,
         selector, features_array,
         models_path, plots_path, shap_path,
         results_standard, results_tuned, eval_metric,
-        model_cv=model_cv, results_cv=results_cv,
+        model_cv=cv_target_model, results_cv=results_cv,
         shap_target_model=shap_target_model,
         plot_bar=plot_bar
     )
 
 
 def data_preparing_pipeline(
-        genomic_data_path: PathLike, 
-        target: str, 
-        oversample: bool = False, 
+        genomic_data_path: PathLike,
+        target: str,
+        oversample: bool = False,
         missing_threshold: float = 10.0,
         to_categorical: bool = True,
     ) -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
     """
     Prepares the data for the pipeline by loading, preprocessing, and splitting it.
-    
+
     :param genomic_data_path: Path to the genomic data file.
     :param target: The target variable for the dataset.
     :param oversample: Whether to oversample the data.
@@ -209,9 +206,9 @@ def _plots_pipeline(
     :param results_standard: The results for the standard models.
     :param results_tuned: The results for the tuned models.
     :param eval_metric: The evaluation metric.
-    :param model_cv: The model used for cross-validation. If None, 
+    :param model_cv: The model used for cross-validation. If None,
         the cross-validation plots will not be generated.
-    :param results_cv: The results for the cross-validation. If None, 
+    :param results_cv: The results for the cross-validation. If None,
         the cross-validation plots will not be generated.
     :param shap_target_model: Specifies which model(s) to generate SHAP summary plots for. Default is "best_performing".
         - "best_performing": SHAP plots for the best performing model.
@@ -221,11 +218,11 @@ def _plots_pipeline(
     :param plot_bar: Whether to plot the SHAP bar plot. Default is False.
     """
     plot_evals(plots_path, results_standard, results_tuned, eval_metric)
-        
+
     if model_cv is not None and results_cv is not None:
         cv_model_name = get_model_name(model_cv, short=True)
         plot_boxplot(results_cv, cv_model_name, plots_path, eval_metric)
-    
+
     if shap_target_model is not None:
         models_for_shap = []
 
@@ -237,7 +234,7 @@ def _plots_pipeline(
             models_for_shap = shap_target_model
         else:
             raise ValueError("shap_target_model must be 'best_performing', a BaseEstimator, or a list of BaseEstimators.")
-        
+
         bar_plot_path = shap_path / "bar_plot"
 
         for model_instance in models_for_shap:
@@ -275,5 +272,5 @@ def move_pipeline_outputs(target_path: PathLike) -> None:
     for file in os.listdir(default_output):
         file = default_output / file
         shutil.move(file, target_path)
-    
+
     print(f"Moved files to {target_path}")

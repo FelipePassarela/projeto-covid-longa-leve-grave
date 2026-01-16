@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-"""Main script of the project. 
+"""Main script of the project.
 
-This script loads genomic data, preprocesses it, trains multiple machine learning models, 
-and evaluates their performance. It also generates plots to visualize the model results 
+This script loads genomic data, preprocesses it, trains multiple machine learning models,
+and evaluates their performance. It also generates plots to visualize the model results
 and projects the data into lower dimensions using UMAP.
 
 Usage:
@@ -19,7 +19,6 @@ from pathlib import Path
 import matplotlib
 import sklearn
 from sklearn.svm import SVC
-from xgboost import XGBClassifier
 
 from utils.pipelines import main_pipeline, move_pipeline_outputs
 
@@ -41,12 +40,12 @@ def main():
     ]
 
     FEATURES_ARRAY = [1, 3, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
-    
+
     for category, subcategory, file_name, target in datasets:
         print(f"Processing dataset: {category}/{subcategory}/{file_name} with target: {target}")
 
         genomic_data_path = Path(f"data/{category}/{subcategory}/{file_name}")
-        
+
         main_pipeline(
             genomic_data_path,
             target,
@@ -55,7 +54,7 @@ def main():
             selector_estim=SVC(kernel="linear", random_state=42),
             fit_selector_on_whole_dataset=True,
             missing_threshold=10.0,
-            run_cv=True,
+            cv_target_model=SVC(),
             shap_target_model=SVC(),
             plot_bar=False,
             eval_metric="roc_auc",
